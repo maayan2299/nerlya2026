@@ -10,15 +10,15 @@ import { useState, useEffect } from 'react'
 export default function HomePage() {
 
   const categories = [
-    { id: 'prayers', title: 'תפילות וברכונים', fileName: 'prayers.png' },
-    { id: 'tallit-covers', title: 'כיסוי טלית ותפילין', fileName: 'tallit-covers.png' },
-    { id: 'natlot', title: 'נטלות', fileName: 'natlot.png' },
-    { id: 'candlesticks', title: 'פמוטים', fileName: 'candlesticks.png' },
-    { id: 'wine-cups', title: 'כוסות יין', fileName: 'wine-cups.png' },
-    { id: 'salt-shakers', title: 'מלחיות', fileName: 'salt-shakers.png' },
-    { id: 'havdalah', title: 'סט הבדלה', fileName: 'havdalah.png' },
-    { id: 'plaster', title: 'מוצרי גבס', fileName: 'plaster.png' },
-    { id: 'other', title: 'מוצרים נוספים', fileName: 'other.png' }
+    { id: 18, title: 'תפילות וברכונים', fileName: 'prayers.png' },
+{ id: 4, title: 'כיסוי טלית ותפילין', fileName: 'tallit-covers.png' },
+{ id: 5, title: 'נטלות', fileName: 'natlot.png' },
+{ id: 6, title: 'פמוטים', fileName: 'candlesticks.png' },
+{ id: 7, title: 'כוסות יין', fileName: 'wine-cups.png' },
+{ id: 8, title: 'מלחיות', fileName: 'salt-shakers.png' },
+{ id: 9, title: 'סט הבדלה', fileName: 'havdalah.png' },
+{ id: 17, title: 'מוצרי גבס', fileName: 'plaster.png' },
+{ id: 11, title: 'מוצרים נוספים', fileName: 'other.png' }
   ]
 
   const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl
