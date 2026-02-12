@@ -4,6 +4,7 @@ import AccessibilityMenu from '../components/AccessibilityMenu'
 import CartDrawer from '../components/CartDrawer'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import FeaturedProducts from '../components/FeaturedProducts' // ⭐ הוסף כאן!
 import { useState, useEffect } from 'react'
 
 export default function HomePage() {
@@ -44,6 +45,9 @@ export default function HomePage() {
           style={{ maxHeight: '70vh' }} 
         />
       </section>
+
+      {/* ⭐ המומלצים שלנו - הוסף כאן! */}
+      <FeaturedProducts />
 
       {/* סליידר קטגוריות */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-16 relative">
