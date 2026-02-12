@@ -47,12 +47,9 @@ export default function ProductDetail() {
   }
 
   const handleAddToCart = () => {
-    const productToAdd = {
-      ...product,
-      customText: customText.trim() || null,
-      price: calculateTotalPrice()
-    }
-    addToCart(productToAdd, quantity)
+    // ✅ שלח את המוצר הבסיסי + כמות + טקסט חריטה
+    // ה-CartContext ידאג לחשב את המחיר הסופי!
+    addToCart(product, quantity, customText.trim() || null)
     setCustomText('')
     setQuantity(1)
   }
