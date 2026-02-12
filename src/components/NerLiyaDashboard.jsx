@@ -906,24 +906,6 @@ const NerLiyaDashboard = () => {
                   מוצרים מומלצים יופיעו בקטע "המומלצים שלנו" בעמוד הראשי
                 </p>
               </div>
-                      type="number"
-                      step="0.01"
-                      value={formData.engraving_price}
-                      onChange={(e) => setFormData({ ...formData, engraving_price: parseFloat(e.target.value) })}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '2px solid #ddd',
-                        borderRadius: '6px',
-                        fontSize: '14px'
-                      }}
-                    />
-                    <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-                      מחיר ברירת המחדל: ₪10
-                    </p>
-                  </div>
-                )}
-              </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button
