@@ -59,10 +59,12 @@ export default function CartDrawer() {
             <div className="space-y-4">
               {cart.map((item) => {
                 const itemImage = item.main_image_url ? getImageUrl(item.main_image_url) : null
-                const itemTotal = (parseFloat(item.price) || 0) * item.quantity
+                const basePrice = parseFloat(item.price) || 0
+                const engravingPrice = parseFloat(item.engravingPrice) || 0
+                const itemTotal = (basePrice + engravingPrice) * item.quantity
 
                 return (
-                  <div key={item.id} className="flex gap-4 pb-4 border-b border-gray-200">
+                  <div key={item.uniqueId || item.id} className="flex gap-4 pb-4 border-b border-gray-200">
                     {/* תמונה */}
                     <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
                       {itemImage ? (
@@ -79,19 +81,30 @@ export default function CartDrawer() {
                     {/* פרטים */}
                     <div className="flex-1">
                       <h3 className="font-medium text-sm mb-1">{item.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">₪{parseFloat(item.price).toLocaleString('he-IL')}</p>
+                      
+                      {/* מחיר בסיס */}
+                      <p className="text-sm text-gray-600">₪{basePrice.toLocaleString('he-IL')}</p>
+                      
+                      {/* חריטה אם יש */}
+                      {item.engravingText && (
+                        <div className="mt-1 text-xs bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block">
+                          <span className="text-amber-700">✨ חריטת שם: </span>
+                          <span className="font-medium text-amber-900">{item.engravingText}</span>
+                          <span className="text-amber-600"> (+₪{engravingPrice})</span>
+                        </div>
+                      )}
                       
                       {/* כפתורי כמות */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mt-2">
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.uniqueId || item.id, item.quantity - 1)}
                           className="w-7 h-7 flex items-center justify-center border border-gray-300 hover:bg-gray-100 transition-colors"
                         >
                           -
                         </button>
                         <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.uniqueId || item.id, item.quantity + 1)}
                           className="w-7 h-7 flex items-center justify-center border border-gray-300 hover:bg-gray-100 transition-colors"
                         >
                           +
@@ -102,14 +115,19 @@ export default function CartDrawer() {
                     {/* מחיר כולל + מחיקה */}
                     <div className="flex flex-col items-end justify-between">
                       <button
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.uniqueId || item.id)}
                         className="text-gray-400 hover:text-red-500 transition-colors"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
-                      <p className="font-semibold text-sm">₪{itemTotal.toLocaleString('he-IL')}</p>
+                      <div className="text-right">
+                        <p className="font-semibold text-sm">₪{itemTotal.toLocaleString('he-IL')}</p>
+                        {item.engravingText && (
+                          <p className="text-xs text-gray-500">כולל חריטה</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
