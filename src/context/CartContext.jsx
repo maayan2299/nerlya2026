@@ -31,22 +31,39 @@ export function CartProvider({ children }) {
     localStorage.setItem('nerlya-cart', JSON.stringify(cart))
   }, [cart])
 
-  // הוסף מוצר לעגלה
-  const addToCart = (product, quantity = 1) => {
+  // הוסף מוצר לעגלה (עם תמיכה בחריטה!)
+  const addToCart = (product, quantity = 1, engravingText = null) => {
     setCart(prevCart => {
-      // בדוק אם המוצר כבר קיים בעגלה
-      const existingItem = prevCart.find(item => item.id === product.id)
+      // צור מזהה ייחודי למוצר (כולל חריטה אם יש)
+      const uniqueId = engravingText 
+        ? `${product.id}-engraved-${engravingText}` 
+        : product.id
+      
+      // בדוק אם המוצר (עם אותה חריטה) כבר קיים בעגלה
+      const existingItem = prevCart.find(item => {
+        if (engravingText) {
+          return item.uniqueId === uniqueId
+        }
+        return item.id === product.id && !item.engravingText
+      })
       
       if (existingItem) {
         // אם קיים - עדכן כמות
         return prevCart.map(item =>
-          item.id === product.id
+          (item.uniqueId || item.id) === uniqueId
             ? { ...item, quantity: item.quantity + quantity }
             : item
         )
       } else {
         // אם לא קיים - הוסף חדש
-        return [...prevCart, { ...product, quantity }]
+        const newItem = { 
+          ...product, 
+          quantity,
+          uniqueId,
+          engravingText,
+          engravingPrice: engravingText ? (product.engraving_price || 10) : 0
+        }
+        return [...prevCart, newItem]
       }
     })
     
@@ -55,20 +72,20 @@ export function CartProvider({ children }) {
   }
 
   // הסר מוצר מהעגלה
-  const removeFromCart = (productId) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId))
+  const removeFromCart = (uniqueId) => {
+    setCart(prevCart => prevCart.filter(item => (item.uniqueId || item.id) !== uniqueId))
   }
 
   // עדכן כמות מוצר
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = (uniqueId, quantity) => {
     if (quantity < 1) {
-      removeFromCart(productId)
+      removeFromCart(uniqueId)
       return
     }
     
     setCart(prevCart =>
       prevCart.map(item =>
-        item.id === productId
+        (item.uniqueId || item.id) === uniqueId
           ? { ...item, quantity }
           : item
       )
@@ -80,11 +97,13 @@ export function CartProvider({ children }) {
     setCart([])
   }
 
-  // חשב סכום ביניים
+  // חשב סכום ביניים (כולל חריטה!)
   const getSubtotal = () => {
     return cart.reduce((total, item) => {
-      const price = parseFloat(item.price) || 0
-      return total + (price * item.quantity)
+      const basePrice = parseFloat(item.price) || 0
+      const engravingPrice = parseFloat(item.engravingPrice) || 0
+      const itemTotal = (basePrice + engravingPrice) * item.quantity
+      return total + itemTotal
     }, 0)
   }
 
