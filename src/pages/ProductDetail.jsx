@@ -62,7 +62,7 @@ export default function ProductDetail() {
 
   const breadcrumbItems = [
     { label: 'עמוד הבית', link: '/' },
-    { label: product.category?.name || 'מוצר', link: `/category/${product.category_id}` }
+    { label: product.category?.name || 'מוצר', link: `/category/${product.category_id}` },
     { label: product.name, link: null }
   ]
 
@@ -151,4 +151,3 @@ export default function ProductDetail() {
     </div>
   )
 }
-
