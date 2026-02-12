@@ -8,17 +8,19 @@ export default function FeaturedProducts() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadFeaturedProducts()
+    fetchFeaturedProducts()
   }, [])
 
-  const loadFeaturedProducts = async () => {
+  async function fetchFeaturedProducts() {
     try {
-      setLoading(true)
       const { data, error } = await supabase
         .from('products')
         .select(`
           *,
-          product_images(image_url, is_primary)
+          product_images (
+            image_url,
+            is_primary
+          )
         `)
         .eq('is_featured', true)
         .eq('is_active', true)
@@ -28,117 +30,95 @@ export default function FeaturedProducts() {
       if (error) throw error
       setFeaturedProducts(data || [])
     } catch (error) {
-      console.error('Error loading featured products:', error)
+      console.error('Error fetching featured products:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  if (loading) {
-    return (
-      <section className="py-16 bg-white" dir="rtl">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto"></div>
-          </div>
-        </div>
-      </section>
-    )
-  }
-
-  if (featuredProducts.length === 0) {
-    return null // אם אין מוצרים מומלצים, לא להציג כלום
-  }
+  if (loading) return null
+  if (featuredProducts.length === 0) return null
 
   return (
-    <section className="py-20 bg-gradient-to-b from-white to-gray-50" dir="rtl">
+    <section className="py-16 md:py-20 bg-gradient-to-b from-white to-gray-50" dir="rtl">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         
-        {/* כותרת */}
-        <div className="text-center mb-16">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <span className="text-4xl">⭐</span>
-            <h2 className="font-serif text-4xl md:text-5xl text-black tracking-tight">
+        {/* כותרת אלגנטית עם לב */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <span className="text-xl">🤍</span>
+            <h2 className="font-serif text-3xl md:text-4xl font-normal text-gray-900">
               המומלצים שלנו
             </h2>
-            <span className="text-4xl">⭐</span>
+            <span className="text-xl">🤍</span>
           </div>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+          <p className="text-gray-600 text-sm md:text-base font-light">
             מוצרים נבחרים במיוחד עבורכם - איכות מעולה ועיצוב ייחודי
           </p>
         </div>
 
         {/* רשת מוצרים */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
           {featuredProducts.map((product) => {
-            const primaryImage = product.product_images?.find(img => img.is_primary)
-            const imageUrl = getImageUrl(primaryImage?.image_url || product.main_image_url)
+            const primaryImage = product.product_images?.find(img => img.is_primary)?.image_url
+            const imageUrl = getImageUrl(primaryImage || product.main_image_url)
 
             return (
               <Link
                 key={product.id}
                 to={`/product/${product.id}`}
-                className="group block bg-white transition-all duration-500 hover:shadow-xl rounded-lg overflow-hidden relative"
+                className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500"
               >
-                {/* תג מומלץ */}
-                <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-                  <span>⭐</span>
-                  <span>מומלץ</span>
+                {/* לב אדום קטן בפינה */}
+                <div className="absolute top-3 left-3 z-10">
+                  <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
+                    <span className="text-red-500 text-lg">❤</span>
+                  </div>
                 </div>
 
                 {/* תמונה */}
-                <div className="aspect-[3/4] overflow-hidden bg-gray-50 relative">
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt={product.name || 'מוצר נר-ליה'}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-200">
-                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                  
-                  {/* אפקט מעבר */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
+                <div className="aspect-[3/4] overflow-hidden bg-gray-100">
+                  <img
+                    src={imageUrl}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    loading="lazy"
+                  />
                 </div>
 
-                {/* פרטי מוצר */}
-                <div className="p-4 text-center">
-                  <h3 className="font-serif text-lg md:text-xl text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors duration-300 tracking-tight font-medium">
-                    {product.name || 'מוצר יוקרה'}
+                {/* פרטים */}
+                <div className="p-4">
+                  <h3 className="font-serif text-base md:text-lg font-normal text-gray-900 mb-2 line-clamp-2 group-hover:text-gray-600 transition-colors">
+                    {product.name}
                   </h3>
                   
-                  {product.price && (
-                    <p className="font-light text-gray-700 text-base md:text-lg font-semibold">
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg md:text-xl font-medium text-[#d4af37]">
                       ₪{parseFloat(product.price).toLocaleString('he-IL')}
                     </p>
-                  )}
-
-                  {/* אינדיקטור חריטה */}
-                  {product.engraving_available && (
-                    <p className="text-xs text-yellow-600 mt-2 flex items-center justify-center gap-1">
-                      <span>✨</span>
-                      <span>זמין לחריטה</span>
-                    </p>
-                  )}
+                    
+                    {product.engraving_available && (
+                      <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                        ✨ חריטה
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {/* אפקט hover */}
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-gray-200 rounded-lg transition-all duration-300 pointer-events-none"></div>
               </Link>
             )
           })}
         </div>
 
         {/* כפתור לכל המוצרים */}
-        <div className="text-center mt-12">
+        <div className="text-center mt-10">
           <Link
             to="/products"
-            className="inline-block px-8 py-4 bg-black text-white hover:bg-gray-800 transition-colors duration-300 text-base tracking-wide font-medium rounded-lg"
+            className="inline-block px-8 py-3 border-2 border-gray-900 text-gray-900 font-medium hover:bg-gray-900 hover:text-white transition-all duration-300"
           >
-            צפו בכל המוצרים →
+            צפו בכל המוצרים
           </Link>
         </div>
       </div>
