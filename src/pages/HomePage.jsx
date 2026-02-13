@@ -4,28 +4,30 @@ import AccessibilityMenu from '../components/AccessibilityMenu'
 import CartDrawer from '../components/CartDrawer'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
-import FeaturedProducts from '../components/FeaturedProducts' // ⭐ הוסף כאן!
-import { useState, useEffect } from 'react'
+import FeaturedProducts from '../components/FeaturedProducts'
+import { useState } from 'react'
 
 export default function HomePage() {
+  // State לתמונת Instagram שנבחרה
+  const [selectedInstagramImage, setSelectedInstagramImage] = useState('post4.jpg')
 
   const categories = [
     { id: 18, title: 'תפילות וברכונים', fileName: 'prayers.png' },
-{ id: 4, title: 'כיסוי טלית ותפילין', fileName: 'tallit-covers.png' },
-{ id: 5, title: 'נטלות', fileName: 'natlot.png' },
-{ id: 6, title: 'פמוטים', fileName: 'candlesticks.png' },
-{ id: 7, title: 'כוסות יין', fileName: 'wine-cups.png' },
-{ id: 8, title: 'מלחיות', fileName: 'salt-shakers.png' },
-{ id: 9, title: 'סט הבדלה', fileName: 'havdalah.png' },
-{ id: 17, title: 'מוצרי גבס', fileName: 'plaster.png' },
-{ id: 11, title: 'מוצרים נוספים', fileName: 'other.png' }
+    { id: 4, title: 'כיסוי טלית ותפילין', fileName: 'tallit-covers.png' },
+    { id: 5, title: 'נטלות', fileName: 'natlot.png' },
+    { id: 6, title: 'פמוטים', fileName: 'candlesticks.png' },
+    { id: 7, title: 'כוסות יין', fileName: 'wine-cups.png' },
+    { id: 8, title: 'מלחיות', fileName: 'salt-shakers.png' },
+    { id: 9, title: 'סט הבדלה', fileName: 'havdalah.png' },
+    { id: 17, title: 'מוצרי גבס', fileName: 'plaster.png' },
+    { id: 11, title: 'מוצרים נוספים', fileName: 'other.png' }
   ]
 
   const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl
   const mainBannerUrl = `${baseUrl}/storage/v1/object/public/banners/banner.png`
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
+    <div className="min-h-screen bg-white overflow-x-hidden" dir="rtl">
       
       {/* תפריט נגישות */}
       <AccessibilityMenu />
@@ -37,7 +39,7 @@ export default function HomePage() {
       <Header />
 
       {/* באנר ראשי */}
-      <section className="w-full">
+      <section className="w-full max-w-[100vw]">
         <img 
           src={mainBannerUrl} 
           alt="נר-ליה" 
@@ -46,123 +48,128 @@ export default function HomePage() {
         />
       </section>
 
-      {/* ⭐ המומלצים שלנו - הוסף כאן! */}
+      {/* המומלצים שלנו */}
       <FeaturedProducts />
 
       {/* סליידר קטגוריות */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-16 relative">
-        <h2 
-          className="text-center text-2xl md:text-4xl font-normal mb-6 md:mb-14 text-black tracking-wide font-serif"
-        >
+        <h2 className="text-center text-2xl md:text-4xl font-normal mb-6 md:mb-14 text-black tracking-wide font-serif">
           הקטגוריות שלנו
         </h2>
         
         <div className="relative">
-  {/* חץ שמאלי */}
-  <button
-    onClick={() => {
-      const container = document.getElementById('categories-scroll');
-      container.scrollBy({ left: -300, behavior: 'smooth' });
-    }}
-    className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg items-center justify-center hover:bg-gray-50 transition-all"
-  >
-    <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-    </svg>
-  </button>
+          {/* חץ שמאלי */}
+          <button
+            onClick={() => {
+              const container = document.getElementById('categories-scroll');
+              container.scrollBy({ left: -300, behavior: 'smooth' });
+            }}
+            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg items-center justify-center hover:bg-gray-50 transition-all"
+          >
+            <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
 
-  {/* חץ ימני */}
-  <button
-    onClick={() => {
-      const container = document.getElementById('categories-scroll');
-      container.scrollBy({ left: 300, behavior: 'smooth' });
-    }}
-    className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg items-center justify-center hover:bg-gray-50 transition-all"
-  >
-    <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-    </svg>
-  </button>
+          {/* חץ ימני */}
+          <button
+            onClick={() => {
+              const container = document.getElementById('categories-scroll');
+              container.scrollBy({ left: 300, behavior: 'smooth' });
+            }}
+            className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg items-center justify-center hover:bg-gray-50 transition-all"
+          >
+            <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
-  <div id="categories-scroll" className="flex gap-3 md:gap-6 overflow-x-auto pb-4 md:pb-8 no-scrollbar px-12 md:px-14">
-    {categories.map((cat) => (
-            <Link 
-              key={cat.id} 
-              to={`/category/${cat.id}`} 
-              className="min-w-[140px] md:min-w-[220px] lg:min-w-[260px] relative group cursor-pointer"
-            >
-              <div className="aspect-[4/5] rounded-lg md:rounded-2xl overflow-hidden shadow-md md:shadow-xl relative bg-gray-50">
-                <img 
-                  src={`${baseUrl}/storage/v1/object/public/categories/${cat.fileName}`} 
-                  alt={cat.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  onError={(e) => {
-                    e.target.style.display = 'none'
-                    e.target.parentElement.querySelector('.placeholder').style.display = 'flex'
-                  }}
-                />
-                {/* Placeholder אם תמונה לא קיימת */}
-                <div className="placeholder hidden absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 items-center justify-center">
-                  <svg className="w-16 h-16 md:w-24 md:h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/70 transition-all duration-300" />
-                
-                <div className="absolute bottom-2 md:bottom-5 right-2 md:right-5 left-2 md:left-5 flex justify-between items-end z-20">
-                  <h3 
-                    className="text-white text-sm md:text-xl font-medium drop-shadow-lg tracking-wide"
-                  >
-                    {cat.title}
-                  </h3>
-                  <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300">
-                    <svg className="w-4 h-4 md:w-5 md:h-5 text-black transform rotate-180" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          <div id="categories-scroll" className="flex gap-3 md:gap-6 overflow-x-auto pb-4 md:pb-8 no-scrollbar px-12 md:px-14">
+            {categories.map((cat) => (
+              <Link 
+                key={cat.id} 
+                to={`/category/${cat.id}`} 
+                className="min-w-[140px] md:min-w-[220px] lg:min-w-[260px] relative group cursor-pointer"
+              >
+                <div className="aspect-[4/5] rounded-lg md:rounded-2xl overflow-hidden shadow-md md:shadow-xl relative bg-gray-50">
+                  <img 
+                    src={`${baseUrl}/storage/v1/object/public/categories/${cat.fileName}`} 
+                    alt={cat.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    onError={(e) => {
+                      e.target.style.display = 'none'
+                      e.target.parentElement.querySelector('.placeholder').style.display = 'flex'
+                    }}
+                  />
+                  {/* Placeholder */}
+                  <div className="placeholder hidden absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 items-center justify-center">
+                    <svg className="w-16 h-16 md:w-24 md:h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/70 transition-all duration-300" />
+                  
+                  <div className="absolute bottom-2 md:bottom-5 right-2 md:right-5 left-2 md:left-5 flex justify-between items-end z-20">
+                    <h3 className="text-white text-sm md:text-xl font-medium drop-shadow-lg tracking-wide">
+                      {cat.title}
+                    </h3>
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300">
+                      <svg className="w-4 h-4 md:w-5 md:h-5 text-black transform rotate-180" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
-      </div>
-    </div>
-  </section>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* פיד אינסטגרם */}
       <section className="relative max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-20 bg-white overflow-hidden">
         
-        {/* כותרת - מעל בנייד, בצד ב-desktop */}
+        {/* כותרת */}
         <div className="text-center md:absolute md:top-8 md:right-8 z-10 mb-6 md:mb-0">
-          <h2 
-            className="text-3xl md:text-5xl lg:text-6xl font-normal text-black tracking-wider font-serif"
-          >
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-normal text-black tracking-wider font-serif">
             עקבו אחרינו
           </h2>
         </div>
 
-        {/* תמונות + מוקאפ טלפון - תמיד מוצג */}
+        {/* תמונות + מוקאפ טלפון */}
         <div className="flex items-center justify-center gap-2 md:gap-6">
           
           {/* תמונה שמאלית 1 */}
-          <div className="w-[90px] md:w-[180px] lg:w-[200px] aspect-square bg-gray-100 rounded-lg md:rounded-2xl overflow-hidden flex-shrink-0 shadow-md md:shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <button
+            onClick={() => setSelectedInstagramImage('post1.jpg')}
+            className="w-[90px] md:w-[180px] lg:w-[200px] aspect-square bg-gray-100 rounded-lg md:rounded-2xl overflow-hidden flex-shrink-0 shadow-md md:shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+          >
             <img 
               src={`${baseUrl}/storage/v1/object/public/instagram/post1.jpg`}
               alt="Instagram 1"
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover"
             />
-          </div>
+          </button>
 
-          {/* תמונה שמאלית 2 - מוסתרת בנייד קטן */}
-          <div className="hidden sm:block w-[90px] md:w-[180px] lg:w-[200px] aspect-square bg-gray-100 rounded-lg md:rounded-2xl overflow-hidden flex-shrink-0 shadow-md md:shadow-lg hover:shadow-xl transition-shadow duration-300">
+          {/* תמונה שמאלית 2 */}
+          <button
+            onClick={() => setSelectedInstagramImage('post2.jpg')}
+            className="hidden sm:block w-[90px] md:w-[180px] lg:w-[200px] aspect-square bg-gray-100 rounded-lg md:rounded-2xl overflow-hidden flex-shrink-0 shadow-md md:shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+          >
             <img 
               src={`${baseUrl}/storage/v1/object/public/instagram/post2.jpg`}
               alt="Instagram 2"
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover"
             />
-          </div>
+          </button>
 
-          {/* מוקאפ טלפון - תמיד מוצג! */}
-          <div className="flex justify-center items-center flex-shrink-0 relative z-20">
+          {/* מוקאפ טלפון */}
+          <a
+            href="https://instagram.com/nerlya_judaica"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex justify-center items-center flex-shrink-0 relative z-20 cursor-pointer hover:scale-105 transition-transform duration-300"
+          >
             <div className="relative">
               <div className="w-[160px] h-[320px] md:w-[240px] md:h-[480px] lg:w-[280px] lg:h-[560px] bg-black rounded-[25px] md:rounded-[40px] lg:rounded-[45px] p-2 md:p-3 lg:p-3.5 shadow-xl md:shadow-2xl">
                 <div className="w-full h-full bg-white rounded-[20px] md:rounded-[33px] lg:rounded-[38px] overflow-hidden relative">
@@ -183,11 +190,13 @@ export default function HomePage() {
                       </svg>
                     </div>
 
-                    <div className="w-full aspect-square bg-gray-100 rounded-md mb-2 md:mb-3 lg:mb-4 overflow-hidden">
+                    {/* התמונה הדינמית */}
+                    <div className="w-full aspect-square bg-gray-100 rounded-md mb-2 md:mb-3 lg:mb-4 overflow-hidden transition-all duration-500">
                       <img 
-                        src={`${baseUrl}/storage/v1/object/public/instagram/post4.jpg`}
+                        src={`${baseUrl}/storage/v1/object/public/instagram/${selectedInstagramImage}`}
                         alt="Instagram post"
                         className="w-full h-full object-cover"
+                        key={selectedInstagramImage}
                       />
                     </div>
 
@@ -218,29 +227,35 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </a>
 
-          {/* תמונה ימנית 1 - מוסתרת בנייד קטן */}
-          <div className="hidden sm:block w-[90px] md:w-[180px] lg:w-[200px] aspect-square bg-gray-100 rounded-lg md:rounded-2xl overflow-hidden flex-shrink-0 shadow-md md:shadow-lg hover:shadow-xl transition-shadow duration-300">
+          {/* תמונה ימנית 1 */}
+          <button
+            onClick={() => setSelectedInstagramImage('post5.jpg')}
+            className="hidden sm:block w-[90px] md:w-[180px] lg:w-[200px] aspect-square bg-gray-100 rounded-lg md:rounded-2xl overflow-hidden flex-shrink-0 shadow-md md:shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+          >
             <img 
               src={`${baseUrl}/storage/v1/object/public/instagram/post5.jpg`}
               alt="Instagram 5"
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover"
             />
-          </div>
+          </button>
 
           {/* תמונה ימנית 2 */}
-          <div className="w-[90px] md:w-[180px] lg:w-[200px] aspect-square bg-gray-100 rounded-lg md:rounded-2xl overflow-hidden flex-shrink-0 shadow-md md:shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <button
+            onClick={() => setSelectedInstagramImage('post6.jpg')}
+            className="w-[90px] md:w-[180px] lg:w-[200px] aspect-square bg-gray-100 rounded-lg md:rounded-2xl overflow-hidden flex-shrink-0 shadow-md md:shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+          >
             <img 
               src={`${baseUrl}/storage/v1/object/public/instagram/post6.jpg`}
               alt="Instagram 6"
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover"
             />
-          </div>
+          </button>
 
         </div>
 
-        {/* שם המשתמש - למטה */}
+        {/* שם המשתמש */}
         <div className="text-center mt-6 md:mt-8">
           <a 
             href="https://instagram.com/nerlya_judaica" 
