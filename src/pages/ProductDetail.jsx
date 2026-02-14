@@ -38,17 +38,29 @@ export default function ProductDetail() {
     if (id) fetchProduct()
   }, [id])
 
-  // חישוב מחיר כולל דינמי - משתמש ב-engraving_available ובמחיר מה-DB
+  // חישוב מחיר חריטה דינמי לפי קטגוריה
+  const calculateEngravingPrice = () => {
+    if (!product.engraving_available || !customText.trim()) {
+      return 0
+    }
+    
+    // קטגוריה 4 = כיסוי טלית ותפילין = 5₪ לאות
+    if (product.category_id === 4) {
+      return customText.trim().length * 5
+    }
+    
+    // שאר הקטגוריות = מחיר קבוע מה-DB
+    return parseFloat(product.engraving_price) || 10
+  }
+
+  // חישוב מחיר כולל
   const calculateTotalPrice = () => {
     const basePrice = parseFloat(product.price) || 0
-    // התוספת תחושב רק אם יש טקסט בתיבה
-    const engravingPrice = (product.engraving_available && customText.trim()) ? (parseFloat(product.engraving_price) || 0) : 0
+    const engravingPrice = calculateEngravingPrice()
     return basePrice + engravingPrice
   }
 
   const handleAddToCart = () => {
-    // ✅ שלח את המוצר הבסיסי + כמות + טקסט חריטה
-    // ה-CartContext ידאג לחשב את המחיר הסופי!
     addToCart(product, quantity, customText.trim() || null)
     setCustomText('')
     setQuantity(1)
@@ -101,23 +113,30 @@ export default function ProductDetail() {
               </p>
             </div>
 
-            {/* החלק של החריטה - מעודכן לשדות הנכונים מה-DB */}
+            {/* החלק של החריטה */}
             {product.engraving_available && (
-              <div className="mb-6 flex flex-col md:flex-row items-center justify-between gap-4 p-4 border border-gray-100 rounded-lg bg-gray-50/50">
-                <div className="flex-1 text-right w-full">
+              <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <div className="mb-3">
                   <p className="text-sm font-medium text-gray-900">
-                    הטבעת שם בתוספת ₪{product.engraving_price || 10}
+                    {product.category_id === 4 ? (
+                      <>חריטת שם - ₪5 לכל אות</>
+                    ) : (
+                      <>חריטת שם - ₪{product.engraving_price || 10}</>
+                    )}
                   </p>
+                  {product.category_id === 4 && customText.trim() && (
+                    <p className="text-xs text-amber-700 mt-1 bg-amber-50 inline-block px-2 py-1 rounded">
+                      {customText.trim().length} אותיות × ₪5 = ₪{customText.trim().length * 5}
+                    </p>
+                  )}
                 </div>
-                <div className="flex-[1.5] w-full font-sans">
-                  <input
-                    type="text"
-                    placeholder="אז מה השם אמרנו? :)"
-                    value={customText}
-                    onChange={(e) => setCustomText(e.target.value)}
-                    className="w-full p-3 text-right border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#D4AF37] bg-white text-sm"
-                  />
-                </div>
+                <input
+                  type="text"
+                  placeholder="אז מה השם אמרנו? :)"
+                  value={customText}
+                  onChange={(e) => setCustomText(e.target.value)}
+                  className="w-full p-3 text-right border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
+                />
               </div>
             )}
 
