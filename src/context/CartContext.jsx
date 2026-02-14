@@ -31,13 +31,25 @@ export function CartProvider({ children }) {
     localStorage.setItem('nerlya-cart', JSON.stringify(cart))
   }, [cart])
 
-  // הוסף מוצר לעגלה (עם תמיכה בחריטה!)
+  // הוסף מוצר לעגלה (עם תמיכה בחריטה חכמה!)
   const addToCart = (product, quantity = 1, engravingText = null) => {
     setCart(prevCart => {
       // צור מזהה ייחודי למוצר (כולל חריטה אם יש)
       const uniqueId = engravingText 
         ? `${product.id}-engraved-${engravingText}` 
         : product.id
+      
+      // חישוב מחיר חריטה חכם לפי קטגוריה
+      let engravingPrice = 0
+      if (engravingText) {
+        // קטגוריה 4 = כיסוי טלית ותפילין = 5₪ לאות
+        if (product.category_id === 4) {
+          engravingPrice = engravingText.length * 5
+        } else {
+          // שאר הקטגוריות = מחיר קבוע
+          engravingPrice = parseFloat(product.engraving_price) || 10
+        }
+      }
       
       // בדוק אם המוצר (עם אותה חריטה) כבר קיים בעגלה
       const existingItem = prevCart.find(item => {
@@ -61,7 +73,7 @@ export function CartProvider({ children }) {
           quantity,
           uniqueId,
           engravingText,
-          engravingPrice: engravingText ? (product.engraving_price || 10) : 0
+          engravingPrice
         }
         return [...prevCart, newItem]
       }
