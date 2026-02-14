@@ -8,7 +8,7 @@ import Header from '../components/Header'
 import Breadcrumbs from '../components/Breadcrumbs'
 
 export default function CategoryPage() {
-  const { id } = useParams() // ← זה המספר מה-URL!
+  const { id } = useParams()
   const { addToCart } = useCart()
   const [products, setProducts] = useState([])
   const [category, setCategory] = useState(null)
@@ -118,12 +118,6 @@ export default function CategoryPage() {
                         <p className="text-[15px] font-bold text-black mb-2">
                           ₪{parseFloat(product.price).toLocaleString('he-IL')}
                         </p>
-                        
-                        {product.engraving_available && (
-                          <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded">
-                            ✨ חריטה
-                          </span>
-                        )}
                       </div>
                     </Link>
                   </div>
