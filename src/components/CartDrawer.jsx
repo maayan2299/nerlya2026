@@ -18,13 +18,16 @@ export default function CartDrawer() {
 
   return (
     <>
+      {/* רקע כהה */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150]"
         onClick={() => setIsCartOpen(false)}
       ></div>
 
+      {/* מגירת עגלה */}
       <div className="fixed top-0 left-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-[151] flex flex-col" dir="rtl">
         
+        {/* כותרת */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-2xl font-bold">העגלה שלי ({cart.length})</h2>
           <button 
@@ -37,6 +40,7 @@ export default function CartDrawer() {
           </button>
         </div>
 
+        {/* תוכן העגלה */}
         <div className="flex-1 overflow-y-auto p-6">
           {cart.length === 0 ? (
             <div className="text-center py-12">
@@ -61,6 +65,7 @@ export default function CartDrawer() {
 
                 return (
                   <div key={item.uniqueId || item.id} className="flex gap-4 pb-4 border-b border-gray-200">
+                    {/* תמונה */}
                     <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
                       {itemImage ? (
                         <img src={itemImage} alt={item.name} className="w-full h-full object-cover" />
@@ -73,10 +78,14 @@ export default function CartDrawer() {
                       )}
                     </div>
 
+                    {/* פרטים */}
                     <div className="flex-1">
                       <h3 className="font-medium text-sm mb-1">{item.name}</h3>
+                      
+                      {/* מחיר בסיס */}
                       <p className="text-sm text-gray-600">₪{basePrice.toLocaleString('he-IL')}</p>
                       
+                      {/* חריטה אם יש */}
                       {item.engravingText && (
                         <div className="mt-1 text-xs bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block">
                           <span className="text-amber-700">✨ חריטת שם: </span>
@@ -85,6 +94,7 @@ export default function CartDrawer() {
                         </div>
                       )}
                       
+                      {/* כפתורי כמות */}
                       <div className="flex items-center gap-2 mt-2">
                         <button
                           onClick={() => updateQuantity(item.uniqueId || item.id, item.quantity - 1)}
@@ -102,6 +112,7 @@ export default function CartDrawer() {
                       </div>
                     </div>
 
+                    {/* מחיר כולל + מחיקה */}
                     <div className="flex flex-col items-end justify-between">
                       <button
                         onClick={() => removeFromCart(item.uniqueId || item.id)}
@@ -125,6 +136,7 @@ export default function CartDrawer() {
           )}
         </div>
 
+        {/* סיכום + כפתור תשלום */}
         {cart.length > 0 && (
           <div className="border-t border-gray-200 p-6 bg-gray-50">
             <div className="space-y-2 mb-4">
