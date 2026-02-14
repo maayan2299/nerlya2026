@@ -83,3 +83,4 @@ The application expects the following Supabase tables:
 
 Images are stored in the Supabase Storage bucket named `productimages`. The application automatically constructs public URLs for images stored in this bucket.
 
+
