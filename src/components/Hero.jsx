@@ -1,73 +1,73 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabaseUrl } from '../lib/supabase'
 
 export default function Hero() {
-  // רשימת התמונות המקורית שלך
-  const originalBanners = [
-    'banner1.jpg',
-    'banner2.png',
-    'banner3.png',
-    'banner4.png',
-    'banner5.png',
-    'banner6.png',
-    'banner7.png',
-    'banner8.png',
-    'banner9.png'
-  ]
+  const [groupIndex, setGroupIndex] = useState(0)
 
-  // אנחנו משכפלים את הרשימה כדי ליצור לולאה אינסופית מושלמת
-  // התוצאה תהיה מערך כפול: [1,2,3...1,2,3...]
-  const banners = [...originalBanners, ...originalBanners]
+  // רשימת התמונות שלך
+  const allBanners = [
+    'banner1.jpg', 'banner2.png', 'banner3.png',
+    'banner4.png', 'banner5.png', 'banner6.png',
+    'banner7.png', 'banner8.png', 'banner9.png'
+  ]
 
   const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl
   const storageUrl = `${baseUrl}/storage/v1/object/public/banners`
 
+  // מחלקים את התמונות לקבוצות של 3
+  // קבוצה 0: תמונות 1,2,3
+  // קבוצה 1: תמונות 4,5,6
+  // קבוצה 2: תמונות 7,8,9
+  const totalGroups = Math.ceil(allBanners.length / 3)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setGroupIndex((prev) => (prev + 1) % totalGroups)
+    }, 5000) // כל 5 שניות החלפה
+
+    return () => clearInterval(timer)
+  }, [totalGroups])
+
+  // חישוב אלו 3 תמונות להציג עכשיו לפי הקבוצה הנוכחית
+  const currentImages = allBanners.slice(groupIndex * 3, (groupIndex * 3) + 3)
+
   return (
-    <div className="relative w-full overflow-hidden bg-white">
-      {/* הגדרת גובה הפס:
-        במובייל: 50% גובה מסך (h-[50vh])
-        במחשב: 75% גובה מסך (md:h-[75vh])
-      */}
-      <div className="relative w-full h-[50vh] md:h-[75vh] flex">
+    <div className="w-full h-[50vh] md:h-[70vh] bg-white overflow-hidden relative">
+      
+      {/* קונטיינר לתמונות - שימוש ב-Grid כדי לחלק ל-3 חלקים שווים */}
+      <div className="grid grid-cols-1 md:grid-cols-3 h-full w-full">
         
-        {/* המסלול שזז - אנימציה אינסופית */}
-        <div className="flex animate-marquee min-w-full">
-          {banners.map((fileName, index) => (
-            <div 
-              key={`${fileName}-${index}`} 
-              // רוחב התמונות:
-              // במובייל: כל תמונה תופסת 80% מהרוחב (כדי שיראו ברור)
-              // במחשב: כל תמונה תופסת 33.3% (שליש) מהרוחב
-              className="relative flex-shrink-0 w-[80vw] md:w-[33.33vw] h-full"
-            >
-              <img
-                src={`${storageUrl}/${fileName}`}
-                alt="אווירה"
-                className="w-full h-full object-cover" // מוודא שאין רווחים לבנים והתמונה נמתחת
-                loading="eager" // טוען את התמונות מיד
-              />
-              {/* שכבת כהות עדינה מאוד שתיתן מראה אחיד */}
-              <div className="absolute inset-0 bg-black/5"></div>
-            </div>
-          ))}
-        </div>
+        {currentImages.map((fileName, index) => (
+          <div 
+            key={`${fileName}-${groupIndex}`} // המפתח הזה גורם לאנימציה לקרות כל פעם שהתמונה מתחלפת
+            className="relative w-full h-full overflow-hidden animate-fade-in"
+            style={{ 
+              // דירוג קטן באנימציה כדי שזה יראה "מפתיע" ולא רובוטי
+              animationDelay: `${index * 150}ms` 
+            }}
+          >
+            <img
+              src={`${storageUrl}/${fileName}`}
+              alt="אווירה"
+              className="w-full h-full object-cover transition-transform duration-[5000ms] hover:scale-110"
+              onError={(e) => { e.target.style.display = 'none' }}
+            />
+            
+            {/* אפקט כהות עדין שנעלם במעבר עכבר */}
+            <div className="absolute inset-0 bg-black/10 hover:bg-transparent transition-colors duration-700"></div>
+          </div>
+        ))}
+
       </div>
 
-      {/* הסטייל של האנימציה */}
+      {/* אנימציית הופעה רכה (Fade In + Zoom Out קטן) */}
       <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); } 
-          /* זזים בדיוק 50% כי שכפלנו את המערך, ואז זה חוזר להתחלה בצורה חלקה */
+        @keyframes fadeInScale {
+          0% { opacity: 0; transform: scale(1.1); }
+          100% { opacity: 1; transform: scale(1); }
         }
-        .animate-marquee {
-          animation: marquee 40s linear infinite; 
-          /* 40 שניות = מהירות הגלילה. רוצה לאט יותר? תשני ל-60s */
-        }
-        
-        /* אופציונלי: עצירה כשעומדים עם העכבר */
-        .animate-marquee:hover {
-          animation-play-state: paused;
+        .animate-fade-in {
+          animation: fadeInScale 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
       `}</style>
     </div>
