@@ -158,7 +158,7 @@ export default function ProductDetail() {
                 <span className="text-sm">תיאור מוצר: {product.description}</span>
               </div>
               <div className="border border-gray-200 p-4 flex items-center gap-3 font-medium text-sm">
-                <span>משלוח חינם עד הבית להזמנות מעל ₪449</span>
+                <span>משלוח חינם עד הבית להזמנות מעל ₪400</span>
               </div>
               <div className="border border-gray-200 p-4 flex items-center gap-3 font-medium text-sm">
                 <span>זמני אספקה 4-6 ימי עסקים</span>
@@ -170,3 +170,4 @@ export default function ProductDetail() {
     </div>
   )
 }
+
