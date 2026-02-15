@@ -1,94 +1,84 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { supabaseUrl } from '../lib/supabase'
 
 export default function Hero() {
-  const [currentSlide, setCurrentSlide] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(0)
 
-  // כאן את מכניסה את הקישורים ל-3 התמונות שלך
-  const slides = [
-    {
-      id: 1,
-      image: "https://images.unsplash.com/photo-1490915785914-0af2806c22b6?q=80&w=2070&auto=format&fit=crop", // תמונה 1
-      title: "קולקציית פמוטים חדשה",
-      subtitle: "הוסיפי אור של קדושה לשבת"
-    },
-    {
-      id: 2,
-      image: "https://images.unsplash.com/photo-1516961642265-531546e84af2?q=80&w=2070&auto=format&fit=crop", // תמונה 2
-      title: "כיסויי טלית ותפילין",
-      subtitle: "ריקמה אישית ועיצוב יוקרתי"
-    },
-    {
-      id: 3,
-      image: "https://images.unsplash.com/photo-1606744884163-49298e82d8c3?q=80&w=2077&auto=format&fit=crop", // תמונה 3
-      title: "מתנות לחגים",
-      subtitle: "מארזים מיוחדים לאנשים שאוהבים"
-    }
+  // רשימת התמונות המדויקת לפי הצילום מסך שלך
+  const banners = [
+    'banner1.jpg', // שמי לב שזה JPG
+    'banner2.png',
+    'banner3.png',
+    'banner4.png',
+    'banner5.png',
+    'banner6.png',
+    'banner7.png',
+    'banner8.png',
+    'banner9.png'
   ]
 
-  // הפונקציה שאחראית על החלפת התמונות כל 5 שניות
+  const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl
+  const storageUrl = `${baseUrl}/storage/v1/object/public/banners`
+
+  // פונקציה למעבר אוטומטי
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1))
-    }, 5000) // 5000 מילישניות = 5 שניות
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % banners.length)
+    }, 5000) // כל 5 שניות
 
     return () => clearInterval(timer)
-  }, [])
+  }, [banners.length])
+
+  // חישוב אלו 3 תמונות להציג כרגע
+  // הלוגיקה הזו דואגת שגם אם הגענו לסוף הרשימה, זה יתחיל מההתחלה בצורה חלקה
+  const getVisibleBanners = () => {
+    const b1 = banners[currentIndex % banners.length]
+    const b2 = banners[(currentIndex + 1) % banners.length]
+    const b3 = banners[(currentIndex + 2) % banners.length]
+    return [b1, b2, b3]
+  }
+
+  const visibleBanners = getVisibleBanners()
 
   return (
-    <div className="relative w-full h-[500px] md:h-[600px] overflow-hidden bg-gray-100">
-      
-      {/* לולאה שמציגה את התמונות */}
-      {slides.map((slide, index) => (
-        <div
-          key={slide.id}
-          className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
-            index === currentSlide ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          {/* התמונה עצמה */}
-          <img
-            src={slide.image}
-            alt={slide.title}
-            className="w-full h-full object-cover"
-          />
-          
-          {/* שכבת כהות עדינה כדי שהטקסט יהיה קריא */}
-          <div className="absolute inset-0 bg-black/30"></div>
+    <div className="relative w-full bg-gray-50 py-8 overflow-hidden">
+      <div className="max-w-[1920px] mx-auto px-4">
+        
+        {/* קונטיינר לתמונות */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8 transition-all duration-700 ease-in-out">
+          {visibleBanners.map((fileName, index) => (
+            <div 
+              key={`${fileName}-${index}`} // מפתח ייחודי לאנימציה חלקה
+              className="relative aspect-[4/3] md:aspect-[3/4] lg:aspect-[16/9] overflow-hidden rounded-2xl shadow-lg group animate-fade-in"
+            >
+              <img
+                src={`${storageUrl}/${fileName}`}
+                alt="באנר אווירה"
+                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                onError={(e) => {
+                  e.target.style.display = 'none' // הסתרת תמונה אם הקישור שבור
+                }}
+              />
+              {/* שכבת כהות עדינה למראה יוקרתי */}
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500"></div>
+            </div>
+          ))}
         </div>
-      ))}
 
-      {/* הטקסט שיושב על התמונה (משתנה בהתאם לתמונה) */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 z-10">
-        <h2 
-          className="text-4xl md:text-6xl font-bold mb-4 tracking-wide drop-shadow-lg transition-all duration-700 transform translate-y-0"
-          style={{ fontFamily: "'StamSefarad', serif" }}
-        >
-          {slides[currentSlide].title}
-        </h2>
-        <p className="text-lg md:text-2xl mb-8 font-light drop-shadow-md">
-          {slides[currentSlide].subtitle}
-        </p>
-        <Link 
-          to="/category/11" // לאן הכפתור מוביל
-          className="bg-white text-black px-8 py-3 rounded-full font-medium hover:bg-gray-100 transition-all hover:scale-105"
-        >
-          לקטלוג המלא
-        </Link>
-      </div>
+        {/* נקודות אינדיקציה למטה (Dots) */}
+        <div className="flex justify-center mt-6 gap-2">
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                index === currentIndex ? 'bg-black w-6' : 'bg-gray-300 hover:bg-gray-400'
+              }`}
+              aria-label={`עבור לתמונה ${index + 1}`}
+            />
+          ))}
+        </div>
 
-      {/* הנקודות הקטנות למטה (Dots) */}
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-20">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all ${
-              index === currentSlide ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'
-            }`}
-            aria-label={`עבור לתמונה ${index + 1}`}
-          />
-        ))}
       </div>
     </div>
   )
