@@ -9,7 +9,6 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const { getItemCount, setIsCartOpen } = useCart()
 
-  // רשימת הקטגוריות
   const categories = [
     { id: 18, name: 'תפילות וברכונים' },
     { id: 4, name: 'כיסוי טלית ותפילין' },
@@ -22,7 +21,6 @@ export default function Header() {
     { id: 11, name: 'מוצרים נוספים' }
   ]
 
-  // זיהוי גלילה
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50)
@@ -31,7 +29,6 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // נעילת גלילה כשהתפריט בנייד פתוח
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden'
@@ -43,8 +40,8 @@ export default function Header() {
   return (
     <>
       {/* פס הכרזה עליון */}
-      <div className="bg-gray-50 text-black py-2 text-center border-b border-gray-200">
-        <p className="text-xs sm:text-sm font-medium px-4">
+      <div className="bg-gray-50 text-black py-1.5 text-center border-b border-gray-200">
+        <p className="text-[10px] sm:text-xs font-medium px-4">
           נר-ליה • אור של קדושה בכל בית | <span className="text-red-600 font-bold">האתר אינו עובד בשבת</span>
         </p>
       </div>
@@ -52,55 +49,56 @@ export default function Header() {
       {/* Header ראשי */}
       <header 
         className={`sticky top-0 z-40 transition-all duration-300 border-b border-gray-100 ${
-          scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-4'
+          scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-3'
         }`}
       >
-        <div className="max-w-[1920px] mx-auto px-4 md:px-6">
-          <div className="flex items-center justify-between lg:grid lg:grid-cols-[200px_1fr_200px] gap-4">
+        <div className="w-full max-w-[1920px] mx-auto px-4">
+          {/* שימוש ב-Flexbox במקום Grid כדי לשלוט טוב יותר בשורה אחת */}
+          <div className="flex items-center justify-between w-full">
             
-            {/* צד ימין - לוגו (והחלק הימני בגריד) */}
-            <div className="flex items-center gap-3">
-              {/* כפתור המבורגר (רק בנייד) */}
+            {/* צד ימין - לוגו */}
+            <div className="flex items-center flex-shrink-0">
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="lg:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                aria-label="פתח תפריט"
+                className="lg:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors ml-2"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
 
-              {/* לוגו */}
-              <Link to="/" className="group flex-shrink-0">
+              <Link to="/" className="flex-shrink-0">
                 <h1 
-                  className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-wider transition-colors text-black"
-                  style={{ fontFamily: "'StamSefarad', serif", fontWeight: 400, letterSpacing: '0.1em' }}
+                  className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-wider text-black whitespace-nowrap"
+                  style={{ fontFamily: "'StamSefarad', serif", fontWeight: 400, letterSpacing: '0.05em' }}
                 >
                   נר-ליה
                 </h1>
               </Link>
             </div>
 
-            {/* מרכז - תפריט ניווט לדסקטופ (החלק המרכזי בגריד) */}
-            <nav className="hidden lg:flex items-center justify-center flex-wrap gap-x-5 gap-y-2 xl:gap-x-8">
-              {categories.map((cat) => (
-                <Link 
-                  key={cat.id} 
-                  to={`/category/${cat.id}`}
-                  className="text-sm font-medium text-gray-600 hover:text-black hover:underline underline-offset-8 transition-all duration-200 whitespace-nowrap"
-                >
-                  {cat.name}
-                </Link>
-              ))}
+            {/* מרכז - תפריט ניווט - כאן השינוי הגדול */}
+            {/* min-w-0 מונע גלישה, flex-1 נותן לו את כל המקום הפנוי */}
+            <nav className="hidden lg:flex items-center justify-center flex-1 px-4">
+              <div className="flex items-center gap-x-4 xl:gap-x-6"> 
+                {categories.map((cat) => (
+                  <Link 
+                    key={cat.id} 
+                    to={`/category/${cat.id}`}
+                    // שימי לב: text-xs במסכים רגילים, text-sm רק במסכים ענקיים
+                    className="text-xs xl:text-sm font-medium text-gray-600 hover:text-black hover:underline underline-offset-4 transition-all duration-200 whitespace-nowrap"
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
             </nav>
 
-            {/* צד שמאל - אייקונים (החלק השמאלי בגריד) */}
-            <div className="flex gap-2 items-center justify-end">
+            {/* צד שמאל - אייקונים */}
+            <div className="flex gap-1 md:gap-2 items-center justify-end flex-shrink-0">
               <button 
                 onClick={() => setSearchOpen(true)}
                 className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-full transition-all"
-                aria-label="חיפוש"
               >
                 <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -110,7 +108,6 @@ export default function Header() {
               <button 
                 onClick={() => setIsCartOpen(true)}
                 className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-full transition-all relative"
-                aria-label="עגלת קניות"
               >
                 <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -126,7 +123,7 @@ export default function Header() {
         </div>
       </header>
 
-      {/* תפריט נייד משודרג (זהה לקוד הקודם, רק מוודא שנמצא פה) */}
+      {/* תפריט נייד */}
       <div 
         className={`fixed inset-0 z-50 lg:hidden transition-all duration-500 ${
           mobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
