@@ -9,7 +9,7 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const { getItemCount, setIsCartOpen } = useCart()
 
-  // רשימת הקטגוריות עם ה-ID התקין (מספרים)
+  // רשימת הקטגוריות
   const categories = [
     { id: 18, name: 'תפילות וברכונים' },
     { id: 4, name: 'כיסוי טלית ותפילין' },
@@ -22,7 +22,7 @@ export default function Header() {
     { id: 11, name: 'מוצרים נוספים' }
   ]
 
-  // זיהוי גלילה כדי לשנות את צבע הסרגל
+  // זיהוי גלילה
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50)
@@ -31,7 +31,7 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // נעילת גלילה של הדף כשהתפריט בנייד פתוח
+  // נעילת גלילה כשהתפריט בנייד פתוח
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden'
@@ -55,11 +55,11 @@ export default function Header() {
           scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-4'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="grid grid-cols-[auto_1fr_auto] lg:grid-cols-[200px_1fr_120px] items-center gap-4">
+        <div className="max-w-[1920px] mx-auto px-4 md:px-6">
+          <div className="flex items-center justify-between lg:grid lg:grid-cols-[200px_1fr_200px] gap-4">
             
-            {/* צד ימין - המבורגר ולוגו */}
-            <div className="flex items-center gap-3 md:gap-4">
+            {/* צד ימין - לוגו (והחלק הימני בגריד) */}
+            <div className="flex items-center gap-3">
               {/* כפתור המבורגר (רק בנייד) */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
@@ -72,7 +72,7 @@ export default function Header() {
               </button>
 
               {/* לוגו */}
-              <Link to="/" className="group">
+              <Link to="/" className="group flex-shrink-0">
                 <h1 
                   className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-wider transition-colors text-black"
                   style={{ fontFamily: "'StamSefarad', serif", fontWeight: 400, letterSpacing: '0.1em' }}
@@ -82,21 +82,21 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* מרכז - תפריט ניווט לדסקטופ */}
-            <nav className="hidden lg:flex items-center justify-center gap-6 xl:gap-8">
+            {/* מרכז - תפריט ניווט לדסקטופ (החלק המרכזי בגריד) */}
+            <nav className="hidden lg:flex items-center justify-center flex-wrap gap-x-5 gap-y-2 xl:gap-x-8">
               {categories.map((cat) => (
                 <Link 
                   key={cat.id} 
                   to={`/category/${cat.id}`}
-                  className="text-sm font-medium text-gray-600 hover:text-black hover:underline underline-offset-8 transition-all duration-200"
+                  className="text-sm font-medium text-gray-600 hover:text-black hover:underline underline-offset-8 transition-all duration-200 whitespace-nowrap"
                 >
                   {cat.name}
                 </Link>
               ))}
             </nav>
 
-            {/* צד שמאל - אייקונים */}
-            <div className="flex gap-2 md:gap-3 items-center justify-end">
+            {/* צד שמאל - אייקונים (החלק השמאלי בגריד) */}
+            <div className="flex gap-2 items-center justify-end">
               <button 
                 onClick={() => setSearchOpen(true)}
                 className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-full transition-all"
@@ -116,7 +116,7 @@ export default function Header() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
                 {getItemCount() > 0 && (
-                  <span className="absolute top-0 right-0 bg-black text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                  <span className="absolute top-0 right-0 bg-black text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {getItemCount()}
                   </span>
                 )}
@@ -126,13 +126,12 @@ export default function Header() {
         </div>
       </header>
 
-      {/* תפריט נייד משודרג (החלק החדש) */}
+      {/* תפריט נייד משודרג (זהה לקוד הקודם, רק מוודא שנמצא פה) */}
       <div 
         className={`fixed inset-0 z-50 lg:hidden transition-all duration-500 ${
           mobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
         }`}
       >
-        {/* רקע חצי שקוף (Backdrop) */}
         <div 
           className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-500 ${
             mobileMenuOpen ? 'opacity-100' : 'opacity-0'
@@ -140,13 +139,11 @@ export default function Header() {
           onClick={() => setMobileMenuOpen(false)}
         ></div>
         
-        {/* המגירה עצמה (Drawer) */}
         <div 
           className={`absolute top-0 right-0 h-full w-[85%] max-w-[320px] bg-white shadow-2xl transform transition-transform duration-500 ease-out ${
             mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          {/* כותרת התפריט */}
           <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
             <h2 
               className="text-2xl font-bold text-gray-800" 
@@ -164,7 +161,6 @@ export default function Header() {
             </button>
           </div>
 
-          {/* רשימת הקישורים */}
           <nav className="p-6 overflow-y-auto h-[calc(100%-80px)]">
             <div className="flex flex-col space-y-2">
               <Link 
@@ -175,9 +171,7 @@ export default function Header() {
                 <span>דף הבית</span>
                 <svg className="w-4 h-4 text-gray-400 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
               </Link>
-
               <div className="border-t border-gray-100 my-2"></div>
-
               {categories.map((cat) => (
                 <Link 
                   key={cat.id} 
@@ -188,20 +182,13 @@ export default function Header() {
                   <span className="text-lg text-gray-600 group-hover:text-black group-hover:translate-x-1 transition-transform font-normal" style={{ fontFamily: "'StamSefarad', serif" }}>
                     {cat.name}
                   </span>
-                  <svg 
-                    className="w-4 h-4 text-gray-300 group-hover:text-black transition-colors rotate-180" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-4 h-4 text-gray-300 group-hover:text-black transition-colors rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
               ))}
             </div>
-            
-            {/* קרדיט תחתון */}
-            <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+             <div className="mt-8 pt-6 border-t border-gray-100 text-center">
                <p className="text-xs text-gray-400">נר-ליה יודאיקה © 2026</p>
             </div>
           </nav>
