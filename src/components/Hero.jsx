@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabaseUrl } from '../lib/supabase'
 
 export default function Hero() {
-  const [currentIndex, setCurrentIndex] = useState(0)
-
-  // רשימת התמונות שלך
-  const banners = [
+  // רשימת התמונות המקורית שלך
+  const originalBanners = [
     'banner1.jpg',
     'banner2.png',
     'banner3.png',
@@ -17,63 +15,59 @@ export default function Hero() {
     'banner9.png'
   ]
 
+  // אנחנו משכפלים את הרשימה כדי ליצור לולאה אינסופית מושלמת
+  // התוצאה תהיה מערך כפול: [1,2,3...1,2,3...]
+  const banners = [...originalBanners, ...originalBanners]
+
   const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl
   const storageUrl = `${baseUrl}/storage/v1/object/public/banners`
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      // מקדם את האינדקס באחד, וחוזר להתחלה כשמגיע לסוף
-      setCurrentIndex((prev) => (prev + 1) % banners.length)
-    }, 5000)
-
-    return () => clearInterval(timer)
-  }, [banners.length])
-
-  // פונקציה שמחשבת אלו 3 תמונות להציג עכשיו (לולאה אינסופית)
-  const getVisibleBanners = () => {
-    return [
-      banners[currentIndex % banners.length],
-      banners[(currentIndex + 1) % banners.length],
-      banners[(currentIndex + 2) % banners.length]
-    ]
-  }
-
-  const visibleSlides = getVisibleBanners()
-
   return (
-    // קונטיינר ראשי - ללא רווחים, תופס את כל הרוחב
-    <div className="w-full h-[500px] md:h-[650px] overflow-hidden relative bg-gray-900">
-      
-      {/* אזור התמונות - מסודר כ-FLEX צמוד */}
-      <div className="flex w-full h-full">
-        {visibleSlides.map((fileName, index) => (
-          <div 
-            key={`${fileName}-${index}`} // מפתח ייחודי לרענון
-            className="relative w-full md:w-1/3 h-full flex-shrink-0 animate-fade-slide" 
-          >
-            <img
-              src={`${storageUrl}/${fileName}`}
-              alt="אווירה"
-              className="w-full h-full object-cover" // object-cover דואג שלא יהיו שוליים לבנים
-              onError={(e) => {
-                e.target.style.display = 'none'
-              }}
-            />
-            
-            {/* שכבת כהות עדינה מאוד שתעלם במעבר עכבר - נותן תחושת עומק */}
-            <div className="absolute inset-0 bg-black/5 hover:bg-transparent transition-colors duration-500"></div>
-          </div>
-        ))}
+    <div className="relative w-full overflow-hidden bg-white">
+      {/* הגדרת גובה הפס:
+        במובייל: 50% גובה מסך (h-[50vh])
+        במחשב: 75% גובה מסך (md:h-[75vh])
+      */}
+      <div className="relative w-full h-[50vh] md:h-[75vh] flex">
+        
+        {/* המסלול שזז - אנימציה אינסופית */}
+        <div className="flex animate-marquee min-w-full">
+          {banners.map((fileName, index) => (
+            <div 
+              key={`${fileName}-${index}`} 
+              // רוחב התמונות:
+              // במובייל: כל תמונה תופסת 80% מהרוחב (כדי שיראו ברור)
+              // במחשב: כל תמונה תופסת 33.3% (שליש) מהרוחב
+              className="relative flex-shrink-0 w-[80vw] md:w-[33.33vw] h-full"
+            >
+              <img
+                src={`${storageUrl}/${fileName}`}
+                alt="אווירה"
+                className="w-full h-full object-cover" // מוודא שאין רווחים לבנים והתמונה נמתחת
+                loading="eager" // טוען את התמונות מיד
+              />
+              {/* שכבת כהות עדינה מאוד שתיתן מראה אחיד */}
+              <div className="absolute inset-0 bg-black/5"></div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* אנימציית CSS מותאמת אישית למעבר חלק */}
+      {/* הסטייל של האנימציה */}
       <style>{`
-        @keyframes fadeSlide {
-          from { opacity: 0.8; transform: scale(1.02); }
-          to { opacity: 1; transform: scale(1); }
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); } 
+          /* זזים בדיוק 50% כי שכפלנו את המערך, ואז זה חוזר להתחלה בצורה חלקה */
         }
-        .animate-fade-slide {
-          animation: fadeSlide 1.5s ease-out forwards;
+        .animate-marquee {
+          animation: marquee 40s linear infinite; 
+          /* 40 שניות = מהירות הגלילה. רוצה לאט יותר? תשני ל-60s */
+        }
+        
+        /* אופציונלי: עצירה כשעומדים עם העכבר */
+        .animate-marquee:hover {
+          animation-play-state: paused;
         }
       `}</style>
     </div>
