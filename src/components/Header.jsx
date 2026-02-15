@@ -42,7 +42,7 @@ export default function Header() {
       {/* פס הכרזה עליון */}
       <div className="bg-gray-50 text-black py-2 text-center border-b border-gray-200">
         <p className="text-xs sm:text-sm font-medium px-4">
-          נר-ליה • אור של קדושה בכל בית | <span className="text-red-600">האתר אינו עובד בשבת</span>
+          נר-ליה • אור של קדושה בכל בית | <span className="text-red-600">!!!האתר אינו עובד בשבת</span>
         </p>
       </div>
 
@@ -159,3 +159,4 @@ export default function Header() {
     </>
   )
 }
+
