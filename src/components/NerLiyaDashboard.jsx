@@ -89,6 +89,8 @@ const MainDashboard = ({ onLogout }) => {
     stock_quantity: 0,
     allows_engraving: false,
     on_sale: false,
+    sale_type: 'percentage',
+    sale_percentage: '',
     sale_price: ''
   });
   
@@ -152,6 +154,17 @@ const MainDashboard = ({ onLogout }) => {
     }
 
     try {
+      // Calculate sale_price based on sale_type
+      let finalSalePrice = null;
+      if (formData.on_sale) {
+        if (formData.sale_type === 'percentage' && formData.sale_percentage) {
+          const discount = (parseFloat(formData.price) * parseFloat(formData.sale_percentage)) / 100;
+          finalSalePrice = parseFloat(formData.price) - discount;
+        } else if (formData.sale_type === 'fixed' && formData.sale_price) {
+          finalSalePrice = parseFloat(formData.sale_price);
+        }
+      }
+
       if (editingProduct) {
         // Update
         await supabase.from('products').update({
@@ -162,7 +175,9 @@ const MainDashboard = ({ onLogout }) => {
           stock_quantity: parseInt(formData.stock_quantity) || 0,
           allows_engraving: formData.allows_engraving,
           on_sale: formData.on_sale,
-          sale_price: formData.on_sale && formData.sale_price ? parseFloat(formData.sale_price) : null
+          sale_type: formData.on_sale ? formData.sale_type : null,
+          sale_percentage: formData.on_sale && formData.sale_type === 'percentage' ? parseInt(formData.sale_percentage) : null,
+          sale_price: finalSalePrice
         }).eq('id', editingProduct.id);
         
         alert('המוצר עודכן!');
@@ -176,7 +191,9 @@ const MainDashboard = ({ onLogout }) => {
           stock_quantity: parseInt(formData.stock_quantity) || 0,
           allows_engraving: formData.allows_engraving,
           on_sale: formData.on_sale,
-          sale_price: formData.on_sale && formData.sale_price ? parseFloat(formData.sale_price) : null,
+          sale_type: formData.on_sale ? formData.sale_type : null,
+          sale_percentage: formData.on_sale && formData.sale_type === 'percentage' ? parseInt(formData.sale_percentage) : null,
+          sale_price: finalSalePrice,
           is_active: true
         }]).select().single();
 
@@ -239,6 +256,8 @@ const MainDashboard = ({ onLogout }) => {
       stock_quantity: product.stock_quantity || 0,
       allows_engraving: product.allows_engraving || false,
       on_sale: product.on_sale || false,
+      sale_type: product.sale_type || 'percentage',
+      sale_percentage: product.sale_percentage || '',
       sale_price: product.sale_price || ''
     });
   };
@@ -254,6 +273,8 @@ const MainDashboard = ({ onLogout }) => {
       stock_quantity: 0,
       allows_engraving: false,
       on_sale: false,
+      sale_type: 'percentage',
+      sale_percentage: '',
       sale_price: ''
     });
     setNewImageFile(null);
@@ -525,18 +546,103 @@ const MainDashboard = ({ onLogout }) => {
                 </div>
 
                 <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
-                    <input type="checkbox" checked={formData.on_sale} onChange={(e) => setFormData({...formData, on_sale: e.target.checked, sale_price: e.target.checked ? formData.sale_price : ''})} style={{ width: 'auto' }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '16px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={formData.on_sale} 
+                      onChange={(e) => setFormData({
+                        ...formData, 
+                        on_sale: e.target.checked, 
+                        sale_percentage: e.target.checked ? formData.sale_percentage : '',
+                        sale_price: e.target.checked ? formData.sale_price : ''
+                      })} 
+                      style={{ width: 'auto' }} 
+                    />
                     <span style={{ fontSize: '15px', fontWeight: '600' }}>🏷️ יש הנחה / מבצע</span>
                   </label>
                   
                   {formData.on_sale && (
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>מחיר מבצע (₪) *</label>
-                      <input type="number" step="0.01" value={formData.sale_price} onChange={(e) => setFormData({...formData, sale_price: e.target.value})} placeholder="המחיר החדש במבצע" required={formData.on_sale} />
-                      {formData.price && formData.sale_price && (
-                        <div style={{ marginTop: '8px', fontSize: '13px', color: '#666' }}>
-                          חיסכון: ₪{(parseFloat(formData.price) - parseFloat(formData.sale_price)).toFixed(2)} ({Math.round(((parseFloat(formData.price) - parseFloat(formData.sale_price)) / parseFloat(formData.price)) * 100)}%)
+                      {/* בחירת סוג הנחה */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', fontWeight: '600' }}>סוג ההנחה:</label>
+                        <div style={{ display: 'flex', gap: '20px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input 
+                              type="radio" 
+                              name="sale_type" 
+                              value="percentage" 
+                              checked={formData.sale_type === 'percentage'}
+                              onChange={(e) => setFormData({...formData, sale_type: e.target.value, sale_price: ''})}
+                              style={{ width: 'auto' }}
+                            />
+                            <span style={{ fontSize: '14px' }}>אחוזים (%)</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <input 
+                              type="radio" 
+                              name="sale_type" 
+                              value="fixed" 
+                              checked={formData.sale_type === 'fixed'}
+                              onChange={(e) => setFormData({...formData, sale_type: e.target.value, sale_percentage: ''})}
+                              style={{ width: 'auto' }}
+                            />
+                            <span style={{ fontSize: '14px' }}>מחיר קבוע (₪)</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* שדות לפי סוג ההנחה */}
+                      {formData.sale_type === 'percentage' ? (
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>אחוז הנחה *</label>
+                          <div style={{ position: 'relative' }}>
+                            <input 
+                              type="number" 
+                              min="1" 
+                              max="99"
+                              value={formData.sale_percentage} 
+                              onChange={(e) => setFormData({...formData, sale_percentage: e.target.value})} 
+                              placeholder="לדוגמה: 20" 
+                              required={formData.on_sale}
+                              style={{ paddingLeft: '30px' }}
+                            />
+                            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#666', fontSize: '14px' }}>%</span>
+                          </div>
+                          {formData.price && formData.sale_percentage && (
+                            <div style={{ marginTop: '12px', padding: '12px', background: '#fff', borderRadius: '4px', border: '1px solid #ddd' }}>
+                              <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>מחיר אחרי הנחה:</div>
+                              <div style={{ fontSize: '20px', fontWeight: '700', color: '#16a34a' }}>
+                                ₪{(parseFloat(formData.price) - (parseFloat(formData.price) * parseFloat(formData.sale_percentage) / 100)).toFixed(2)}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                                חיסכון: ₪{((parseFloat(formData.price) * parseFloat(formData.sale_percentage)) / 100).toFixed(2)}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>מחיר מבצע (₪) *</label>
+                          <input 
+                            type="number" 
+                            step="0.01" 
+                            value={formData.sale_price} 
+                            onChange={(e) => setFormData({...formData, sale_price: e.target.value})} 
+                            placeholder="המחיר החדש במבצע" 
+                            required={formData.on_sale}
+                          />
+                          {formData.price && formData.sale_price && parseFloat(formData.sale_price) < parseFloat(formData.price) && (
+                            <div style={{ marginTop: '12px', padding: '12px', background: '#fff', borderRadius: '4px', border: '1px solid #ddd' }}>
+                              <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>פרטי ההנחה:</div>
+                              <div style={{ fontSize: '16px', fontWeight: '600', color: '#16a34a' }}>
+                                {Math.round(((parseFloat(formData.price) - parseFloat(formData.sale_price)) / parseFloat(formData.price)) * 100)}% הנחה
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                                חיסכון: ₪{(parseFloat(formData.price) - parseFloat(formData.sale_price)).toFixed(2)}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
