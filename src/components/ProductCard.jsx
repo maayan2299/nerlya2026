@@ -6,14 +6,17 @@ export default function ProductCard({ product }) {
   const rawUrl = product.main_image_url;
   const formattedUrl = rawUrl && !rawUrl.includes('.') ? `${rawUrl}.JPG` : rawUrl;
   const imageUrl = getImageUrl(formattedUrl);
-
+  
+  const onSale = product.on_sale && product.sale_price;
+  const displayPrice = onSale ? product.sale_price : product.price;
+  
   return (
     <Link
       to={`/product/${product.id}`}
       className="group block bg-transparent transition-all duration-500"
       dir="rtl"
     >
-      {/* Container התמונה - נקי ללא מסגרת חיצונית כבדה */}
+      {/* Container התמונה */}
       <div className="aspect-[3/4] overflow-hidden bg-[#F9F9F7] relative mb-4">
         {imageUrl ? (
           <img
@@ -30,23 +33,42 @@ export default function ProductCard({ product }) {
           </div>
         )}
         
+        {/* תווית מבצע */}
+        {onSale && (
+          <div className="absolute top-3 right-3 bg-red-600 text-white px-3 py-1 text-sm font-semibold rounded shadow-lg">
+            מבצע!
+          </div>
+        )}
+        
         {/* אפקט מעבר עדין ב-Hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
       </div>
-
-      {/* פרטי המוצר - טיפוגרפיה נקייה */}
+      
+      {/* פרטי המוצר */}
       <div className="text-center px-2">
         <h3 className="font-serif text-lg md:text-xl text-gray-900 mb-1 group-hover:text-[#D4AF37] transition-colors duration-300 tracking-tight font-medium">
           {product.name || 'מוצר יוקרה'}
         </h3>
         
         {product.price && (
-          <p className="font-light text-gray-600 text-base md:text-lg">
-            ₪{parseFloat(product.price).toLocaleString('he-IL')}
-          </p>
+          <div className="font-light text-base md:text-lg">
+            {onSale ? (
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-gray-400 line-through text-sm">
+                  ₪{parseFloat(product.price).toLocaleString('he-IL')}
+                </span>
+                <span className="text-red-600 font-semibold">
+                  ₪{parseFloat(displayPrice).toLocaleString('he-IL')}
+                </span>
+              </div>
+            ) : (
+              <p className="text-gray-600">
+                ₪{parseFloat(displayPrice).toLocaleString('he-IL')}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </Link>
   )
-
 }
