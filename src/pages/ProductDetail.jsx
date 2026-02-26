@@ -53,11 +53,12 @@ export default function ProductDetail() {
     return parseFloat(product.engraving_price) || 10
   }
 
-  // חישוב מחיר כולל
+  // חישוב מחיר כולל (כולל הנחה)
   const calculateTotalPrice = () => {
-    const basePrice = parseFloat(product.price) || 0
-    const engravingPrice = calculateEngravingPrice()
-    return basePrice + engravingPrice
+    const onSale = product.on_sale && product.sale_price;
+    const basePrice = onSale ? parseFloat(product.sale_price) : parseFloat(product.price) || 0;
+    const engravingPrice = calculateEngravingPrice();
+    return basePrice + engravingPrice;
   }
 
   const handleAddToCart = () => {
@@ -77,6 +78,8 @@ export default function ProductDetail() {
     { label: product.category?.name || 'מוצר', link: `/category/${product.category_id}` },
     { label: product.name, link: null }
   ]
+
+  const onSale = product.on_sale && product.sale_price;
 
   return (
     <div className="min-h-screen bg-white" dir="rtl">
@@ -98,8 +101,15 @@ export default function ProductDetail() {
                 ))}
               </div>
             )}
-            <div className="flex-1 aspect-square bg-gray-50 border border-gray-200 overflow-hidden">
+            <div className="flex-1 aspect-square bg-gray-50 border border-gray-200 overflow-hidden relative">
               <img src={mainImage} className="w-full h-full object-cover" />
+              
+              {/* תווית מבצע */}
+              {onSale && (
+                <div className="absolute top-4 right-4 bg-red-600 text-white px-4 py-2 text-base font-bold rounded-lg shadow-lg">
+                  🏷️ מבצע!
+                </div>
+              )}
             </div>
           </div>
 
@@ -108,9 +118,24 @@ export default function ProductDetail() {
             <h1 className="font-serif text-3xl md:text-4xl mb-4 font-normal">{product.name}</h1>
             
             <div className="mb-6">
-              <p className="text-2xl md:text-3xl font-normal">
-                ₪{calculateTotalPrice().toLocaleString('he-IL')}
-              </p>
+              {onSale ? (
+                <div>
+                  <p className="text-xl text-gray-400 line-through mb-2">
+                    ₪{parseFloat(product.price).toLocaleString('he-IL')}
+                  </p>
+                  <p className="text-3xl md:text-4xl font-semibold text-red-600">
+                    ₪{calculateTotalPrice().toLocaleString('he-IL')}
+                  </p>
+                  <p className="text-sm text-green-700 mt-2 font-medium">
+                    חיסכון של ₪{(parseFloat(product.price) - parseFloat(product.sale_price)).toFixed(2)} 
+                    ({Math.round(((parseFloat(product.price) - parseFloat(product.sale_price)) / parseFloat(product.price)) * 100)}%)
+                  </p>
+                </div>
+              ) : (
+                <p className="text-2xl md:text-3xl font-normal">
+                  ₪{calculateTotalPrice().toLocaleString('he-IL')}
+                </p>
+              )}
             </div>
 
             {/* החלק של החריטה */}
@@ -170,4 +195,3 @@ export default function ProductDetail() {
     </div>
   )
 }
-
