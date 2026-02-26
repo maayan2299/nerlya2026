@@ -87,7 +87,9 @@ const MainDashboard = ({ onLogout }) => {
     description: '',
     category_id: '',
     stock_quantity: 0,
-    allows_engraving: false
+    allows_engraving: false,
+    on_sale: false,
+    sale_price: ''
   });
   
   // Image/Color states
@@ -158,7 +160,9 @@ const MainDashboard = ({ onLogout }) => {
           description: formData.description,
           category_id: formData.category_id || null,
           stock_quantity: parseInt(formData.stock_quantity) || 0,
-          allows_engraving: formData.allows_engraving
+          allows_engraving: formData.allows_engraving,
+          on_sale: formData.on_sale,
+          sale_price: formData.on_sale && formData.sale_price ? parseFloat(formData.sale_price) : null
         }).eq('id', editingProduct.id);
         
         alert('המוצר עודכן!');
@@ -171,6 +175,8 @@ const MainDashboard = ({ onLogout }) => {
           category_id: formData.category_id || null,
           stock_quantity: parseInt(formData.stock_quantity) || 0,
           allows_engraving: formData.allows_engraving,
+          on_sale: formData.on_sale,
+          sale_price: formData.on_sale && formData.sale_price ? parseFloat(formData.sale_price) : null,
           is_active: true
         }]).select().single();
 
@@ -231,7 +237,9 @@ const MainDashboard = ({ onLogout }) => {
       description: product.description || '',
       category_id: product.category_id || '',
       stock_quantity: product.stock_quantity || 0,
-      allows_engraving: product.allows_engraving || false
+      allows_engraving: product.allows_engraving || false,
+      on_sale: product.on_sale || false,
+      sale_price: product.sale_price || ''
     });
   };
 
@@ -244,7 +252,9 @@ const MainDashboard = ({ onLogout }) => {
       description: '',
       category_id: '',
       stock_quantity: 0,
-      allows_engraving: false
+      allows_engraving: false,
+      on_sale: false,
+      sale_price: ''
     });
     setNewImageFile(null);
   };
@@ -414,8 +424,23 @@ const MainDashboard = ({ onLogout }) => {
                 <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#000' }}>{product.name}</h3>
                 <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>{product.category_name || 'ללא קטגוריה'}</p>
                 
+                {product.on_sale && product.sale_price && (
+                  <div style={{ display: 'inline-block', background: '#dc2626', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>
+                    🏷️ מבצע!
+                  </div>
+                )}
+                
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '20px', fontWeight: '700', color: '#000' }}>₪{product.price}</span>
+                  <div>
+                    {product.on_sale && product.sale_price ? (
+                      <div>
+                        <span style={{ fontSize: '16px', color: '#999', textDecoration: 'line-through', marginLeft: '8px' }}>₪{product.price}</span>
+                        <span style={{ fontSize: '22px', fontWeight: '700', color: '#dc2626' }}>₪{product.sale_price}</span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '20px', fontWeight: '700', color: '#000' }}>₪{product.price}</span>
+                    )}
+                  </div>
                   <span style={{ fontSize: '14px', color: '#666' }}>מלאי: {product.stock_quantity || 0}</span>
                 </div>
 
@@ -497,6 +522,25 @@ const MainDashboard = ({ onLogout }) => {
                     <input type="checkbox" checked={formData.allows_engraving} onChange={(e) => setFormData({...formData, allows_engraving: e.target.checked})} style={{ width: 'auto' }} />
                     <span style={{ fontSize: '15px' }}>מאפשר חריטה אישית (+10 ₪)</span>
                   </label>
+                </div>
+
+                <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
+                    <input type="checkbox" checked={formData.on_sale} onChange={(e) => setFormData({...formData, on_sale: e.target.checked, sale_price: e.target.checked ? formData.sale_price : ''})} style={{ width: 'auto' }} />
+                    <span style={{ fontSize: '15px', fontWeight: '600' }}>🏷️ יש הנחה / מבצע</span>
+                  </label>
+                  
+                  {formData.on_sale && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>מחיר מבצע (₪) *</label>
+                      <input type="number" step="0.01" value={formData.sale_price} onChange={(e) => setFormData({...formData, sale_price: e.target.value})} placeholder="המחיר החדש במבצע" required={formData.on_sale} />
+                      {formData.price && formData.sale_price && (
+                        <div style={{ marginTop: '8px', fontSize: '13px', color: '#666' }}>
+                          חיסכון: ₪{(parseFloat(formData.price) - parseFloat(formData.sale_price)).toFixed(2)} ({Math.round(((parseFloat(formData.price) - parseFloat(formData.sale_price)) / parseFloat(formData.price)) * 100)}%)
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {!editingProduct && (
