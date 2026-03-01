@@ -33,13 +33,6 @@ export default function ProductCard({ product }) {
           </div>
         )}
         
-        {/* תווית מבצע */}
-        {onSale && (
-          <div className="absolute top-3 right-3 bg-red-600 text-white px-3 py-1 text-sm font-semibold rounded shadow-lg">
-            מבצע!
-          </div>
-        )}
-        
         {/* אפקט מעבר עדין ב-Hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
       </div>
@@ -53,11 +46,11 @@ export default function ProductCard({ product }) {
         {product.price && (
           <div className="font-light text-base md:text-lg">
             {onSale ? (
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-baseline justify-center gap-2">
                 <span className="text-gray-400 line-through text-sm">
                   ₪{parseFloat(product.price).toLocaleString('he-IL')}
                 </span>
-                <span className="text-red-600 font-semibold">
+                <span className="text-gray-900 font-normal">
                   ₪{parseFloat(displayPrice).toLocaleString('he-IL')}
                 </span>
               </div>
