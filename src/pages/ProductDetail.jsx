@@ -103,13 +103,6 @@ export default function ProductDetail() {
             )}
             <div className="flex-1 aspect-square bg-gray-50 border border-gray-200 overflow-hidden relative">
               <img src={mainImage} className="w-full h-full object-cover" />
-              
-              {/* תווית מבצע */}
-              {onSale && (
-                <div className="absolute top-4 right-4 bg-red-600 text-white px-4 py-2 text-base font-bold rounded-lg shadow-lg">
-                  🏷️ מבצע!
-                </div>
-              )}
             </div>
           </div>
 
@@ -119,16 +112,12 @@ export default function ProductDetail() {
             
             <div className="mb-6">
               {onSale ? (
-                <div>
-                  <p className="text-xl text-gray-400 line-through mb-2">
+                <div className="flex items-baseline gap-3">
+                  <p className="text-lg text-gray-400 line-through font-light">
                     ₪{parseFloat(product.price).toLocaleString('he-IL')}
                   </p>
-                  <p className="text-3xl md:text-4xl font-semibold text-red-600">
+                  <p className="text-3xl md:text-4xl font-normal text-gray-900">
                     ₪{calculateTotalPrice().toLocaleString('he-IL')}
-                  </p>
-                  <p className="text-sm text-green-700 mt-2 font-medium">
-                    חיסכון של ₪{(parseFloat(product.price) - parseFloat(product.sale_price)).toFixed(2)} 
-                    ({Math.round(((parseFloat(product.price) - parseFloat(product.sale_price)) / parseFloat(product.price)) * 100)}%)
                   </p>
                 </div>
               ) : (
