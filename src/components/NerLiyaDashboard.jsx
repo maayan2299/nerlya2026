@@ -67,6 +67,7 @@ const AdminDashboard = () => {
 };
 
 const MainDashboard = ({ onLogout }) => {
+  const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [products, setProducts] = useState([]);
@@ -88,6 +89,7 @@ const MainDashboard = ({ onLogout }) => {
     category_id: '',
     stock_quantity: 0,
     allows_engraving: false,
+    is_featured: false,
     on_sale: false,
     sale_type: 'percentage',
     sale_percentage: '',
@@ -174,6 +176,7 @@ const MainDashboard = ({ onLogout }) => {
           category_id: formData.category_id || null,
           stock_quantity: parseInt(formData.stock_quantity) || 0,
           allows_engraving: formData.allows_engraving,
+          is_featured: formData.is_featured,
           on_sale: formData.on_sale,
           sale_type: formData.on_sale ? formData.sale_type : null,
           sale_percentage: formData.on_sale && formData.sale_type === 'percentage' ? parseInt(formData.sale_percentage) : null,
@@ -190,6 +193,7 @@ const MainDashboard = ({ onLogout }) => {
           category_id: formData.category_id || null,
           stock_quantity: parseInt(formData.stock_quantity) || 0,
           allows_engraving: formData.allows_engraving,
+          is_featured: formData.is_featured,
           on_sale: formData.on_sale,
           sale_type: formData.on_sale ? formData.sale_type : null,
           sale_percentage: formData.on_sale && formData.sale_type === 'percentage' ? parseInt(formData.sale_percentage) : null,
@@ -255,6 +259,7 @@ const MainDashboard = ({ onLogout }) => {
       category_id: product.category_id || '',
       stock_quantity: product.stock_quantity || 0,
       allows_engraving: product.allows_engraving || false,
+      is_featured: product.is_featured || false,
       on_sale: product.on_sale || false,
       sale_type: product.sale_type || 'percentage',
       sale_percentage: product.sale_percentage || '',
@@ -272,6 +277,7 @@ const MainDashboard = ({ onLogout }) => {
       category_id: '',
       stock_quantity: 0,
       allows_engraving: false,
+      is_featured: false,
       on_sale: false,
       sale_type: 'percentage',
       sale_percentage: '',
@@ -404,96 +410,200 @@ const MainDashboard = ({ onLogout }) => {
         </div>
       </div>
 
+      {/* Tabs Navigation */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #eee' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '0' }}>
+          {['overview', 'products', 'categories'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '16px 24px',
+                background: 'none',
+                border: 'none',
+                borderBottom: activeTab === tab ? '3px solid #000' : '3px solid transparent',
+                color: activeTab === tab ? '#000' : '#666',
+                fontWeight: activeTab === tab ? '600' : '400',
+                fontSize: '15px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {tab === 'overview' && 'סקירה כללית'}
+              {tab === 'products' && 'מוצרים'}
+              {tab === 'categories' && 'קטגוריות'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Main Content */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px' }}>
         
-        {/* Toolbar */}
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <button onClick={openAddModal} style={{ background: '#000', color: '#fff', border: 'none', padding: '14px 24px', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={20} /> הוסף מוצר חדש
-          </button>
-          
-          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
-            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="חיפוש מוצר..." style={{ paddingRight: '40px' }} />
-          </div>
-
-          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} style={{ minWidth: '180px' }}>
-            <option value="">כל הקטגוריות</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Products Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-          {filteredProducts.map(product => (
-            <div key={product.id} style={{ background: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-              
-              {/* Image */}
-              <div style={{ width: '100%', height: '250px', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {product.primary_image ? (
-                  <img src={product.primary_image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <ImageIcon size={60} color="#ccc" />
-                )}
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div>
+            {/* Statistics */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>סה"כ מוצרים</div>
+                <div style={{ fontSize: '32px', fontWeight: '700' }}>📦 {products.length}</div>
               </div>
-
-              {/* Content */}
-              <div style={{ padding: '20px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#000' }}>{product.name}</h3>
-                <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>{product.category_name || 'ללא קטגוריה'}</p>
-                
-                {product.on_sale && product.sale_price && (
-                  <div style={{ display: 'inline-block', background: '#dc2626', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>
-                    🏷️ מבצע!
-                  </div>
-                )}
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <div>
-                    {product.on_sale && product.sale_price ? (
-                      <div>
-                        <span style={{ fontSize: '16px', color: '#999', textDecoration: 'line-through', marginLeft: '8px' }}>₪{product.price}</span>
-                        <span style={{ fontSize: '22px', fontWeight: '700', color: '#dc2626' }}>₪{product.sale_price}</span>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '20px', fontWeight: '700', color: '#000' }}>₪{product.price}</span>
-                    )}
-                  </div>
-                  <span style={{ fontSize: '14px', color: '#666' }}>מלאי: {product.stock_quantity || 0}</span>
-                </div>
-
-                {product.allows_engraving && (
-                  <div style={{ fontSize: '13px', color: '#4CAF50', marginBottom: '12px' }}>✓ חריטה אישית</div>
-                )}
-
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                  <button onClick={() => openImagesModal(product)} style={{ flex: 1, padding: '8px', background: '#f5f5f5', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>
-                    📷 {product.images_count} תמונות
-                  </button>
-                  <button onClick={() => openColorsModal(product)} style={{ flex: 1, padding: '8px', background: '#f5f5f5', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>
-                    🎨 {product.colors_count} צבעים
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => openEditModal(product)} style={{ flex: 1, padding: '10px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
-                    ערוך
-                  </button>
-                  <button onClick={() => handleDelete(product.id)} style={{ padding: '10px 16px', background: '#fff', color: '#dc2626', border: '1px solid #dc2626', borderRadius: '4px', cursor: 'pointer' }}>
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>קטגוריות</div>
+                <div style={{ fontSize: '32px', fontWeight: '700' }}>📁 {categories.length}</div>
+              </div>
+              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>מוצרים מומלצים</div>
+                <div style={{ fontSize: '32px', fontWeight: '700' }}>⭐ {products.filter(p => p.is_featured).length}</div>
+              </div>
+              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>מוצרים במבצע</div>
+                <div style={{ fontSize: '32px', fontWeight: '700' }}>🏷️ {products.filter(p => p.on_sale).length}</div>
               </div>
             </div>
-          ))}
-        </div>
 
-        {filteredProducts.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
-            <p style={{ fontSize: '18px' }}>לא נמצאו מוצרים</p>
+            {/* Categories Overview */}
+            <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>קטגוריות</h2>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {categories.map(cat => {
+                  const count = products.filter(p => p.category_id === cat.id).length;
+                  return (
+                    <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f9f9f9', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '500' }}>{cat.name}</span>
+                      <span style={{ fontSize: '14px', color: '#666' }}>{count} מוצרים</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Products Tab */}
+        {activeTab === 'products' && (
+          <div>
+            {/* Toolbar */}
+            <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <button onClick={openAddModal} style={{ background: '#000', color: '#fff', border: 'none', padding: '14px 24px', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={20} /> הוסף מוצר חדש
+              </button>
+              
+              <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+                <Search size={18} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
+                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="חיפוש מוצר..." style={{ paddingRight: '40px' }} />
+              </div>
+
+              <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} style={{ minWidth: '180px' }}>
+                <option value="">כל הקטגוריות</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Products Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              {filteredProducts.map(product => (
+                <div key={product.id} style={{ background: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', transition: 'transform 0.2s', cursor: 'pointer', position: 'relative' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                  
+                  {/* Featured Star Badge */}
+                  {product.is_featured && (
+                    <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, background: '#fff', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                      ⭐
+                    </div>
+                  )}
+
+                  {/* Image */}
+                  <div style={{ width: '100%', height: '250px', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {product.primary_image ? (
+                      <img src={product.primary_image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <ImageIcon size={60} color="#ccc" />
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div style={{ padding: '20px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#000' }}>{product.name}</h3>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>{product.category_name || 'ללא קטגוריה'}</p>
+                    
+                    {product.on_sale && product.sale_price && (
+                      <div style={{ display: 'inline-block', background: '#dc2626', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>
+                        🏷️ מבצע!
+                      </div>
+                    )}
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div>
+                        {product.on_sale && product.sale_price ? (
+                          <div>
+                            <span style={{ fontSize: '16px', color: '#999', textDecoration: 'line-through', marginLeft: '8px' }}>₪{product.price}</span>
+                            <span style={{ fontSize: '22px', fontWeight: '700', color: '#dc2626' }}>₪{product.sale_price}</span>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '20px', fontWeight: '700', color: '#000' }}>₪{product.price}</span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '14px', color: '#666' }}>מלאי: {product.stock_quantity || 0}</span>
+                    </div>
+
+                    {product.allows_engraving && (
+                      <div style={{ fontSize: '13px', color: '#4CAF50', marginBottom: '12px' }}>✓ חריטה אישית</div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                      <button onClick={() => openImagesModal(product)} style={{ flex: 1, padding: '8px', background: '#f5f5f5', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>
+                        📷 {product.images_count} תמונות
+                      </button>
+                      <button onClick={() => openColorsModal(product)} style={{ flex: 1, padding: '8px', background: '#f5f5f5', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>
+                        🎨 {product.colors_count} צבעים
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => openEditModal(product)} style={{ flex: 1, padding: '10px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+                        ערוך
+                      </button>
+                      <button onClick={() => handleDelete(product.id)} style={{ padding: '10px 16px', background: '#fff', color: '#dc2626', border: '1px solid #dc2626', borderRadius: '4px', cursor: 'pointer' }}>
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredProducts.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
+                <p style={{ fontSize: '18px' }}>לא נמצאו מוצרים</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Categories Tab */}
+        {activeTab === 'categories' && (
+          <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>ניהול קטגוריות</h2>
+            <p style={{ color: '#666', marginBottom: '20px' }}>לניהול קטגוריות, גש לטבלת categories ב-Supabase</p>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {categories.map(cat => {
+                const count = products.filter(p => p.category_id === cat.id).length;
+                return (
+                  <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#f9f9f9', borderRadius: '4px' }}>
+                    <div>
+                      <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{cat.name}</div>
+                      <div style={{ fontSize: '13px', color: '#666' }}>{count} מוצרים בקטגוריה</div>
+                    </div>
+                    <button onClick={() => setSelectedCategory(cat.id.toString())} style={{ background: '#000', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
+                      צפה במוצרים
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -542,6 +652,13 @@ const MainDashboard = ({ onLogout }) => {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                     <input type="checkbox" checked={formData.allows_engraving} onChange={(e) => setFormData({...formData, allows_engraving: e.target.checked})} style={{ width: 'auto' }} />
                     <span style={{ fontSize: '15px' }}>מאפשר חריטה אישית (+10 ₪)</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={formData.is_featured} onChange={(e) => setFormData({...formData, is_featured: e.target.checked})} style={{ width: 'auto' }} />
+                    <span style={{ fontSize: '15px' }}>⭐ מומלץ שלנו (יופיע בעמוד הבית)</span>
                   </label>
                 </div>
 
