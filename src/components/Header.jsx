@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
@@ -9,17 +10,15 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const { getItemCount, setIsCartOpen } = useCart()
 
-  const categories = [
-    { id: 18, name: 'תפילות וברכונים' },
-    { id: 4, name: 'כיסוי טלית ותפילין' },
-    { id: 5, name: 'נטלות' },
-    { id: 6, name: 'פמוטים' },
-    { id: 7, name: 'כוסות יין' },
-    { id: 8, name: 'מלחיות' },
-    { id: 9, name: 'סט הבדלה' },
-    { id: 17, name: 'מוצרי גבס' },
-    { id: 11, name: 'מוצרים נוספים' }
-  ]
+ const [categories, setCategories] = useState([])
+
+useEffect(() => {
+  async function loadCategories() {
+    const { data } = await supabase.from('categories').select('*').order('display_order')
+    setCategories(data || [])
+  }
+  loadCategories()
+}, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -196,3 +195,4 @@ export default function Header() {
     </>
   )
 }
+
