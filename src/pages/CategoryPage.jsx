@@ -115,9 +115,20 @@ export default function CategoryPage() {
                         <h3 className="text-[14px] text-gray-800 font-medium mb-1 line-clamp-2">
                           {product.name}
                         </h3>
-                        <p className="text-[15px] font-bold text-black mb-2">
-                          ₪{parseFloat(product.price).toLocaleString('he-IL')}
-                        </p>
+                        {product.on_sale && product.sale_price ? (
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-[13px] text-gray-400 line-through">
+                              ₪{parseFloat(product.price).toLocaleString('he-IL')}
+                            </span>
+                            <span className="text-[15px] font-bold text-gray-900">
+                              ₪{parseFloat(product.sale_price).toLocaleString('he-IL')}
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="text-[15px] font-bold text-black mb-2">
+                            ₪{parseFloat(product.price).toLocaleString('he-IL')}
+                          </p>
+                        )}
                       </div>
                     </Link>
                   </div>
