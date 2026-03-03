@@ -1,8 +1,8 @@
-import { supabase } from '../lib/supabase'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import SearchModal from './SearchModal'
+import { supabase } from '../lib/supabase'
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false)
@@ -195,4 +195,5 @@ useEffect(() => {
     </>
   )
 }
+
 
