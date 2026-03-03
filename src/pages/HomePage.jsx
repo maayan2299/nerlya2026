@@ -6,7 +6,6 @@ import CartDrawer from '../components/CartDrawer'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import FeaturedProducts from '../components/FeaturedProducts'
-import { useState } from 'react'
 
 export default function HomePage() {
   // State לתמונת Instagram שנבחרה
@@ -330,4 +329,5 @@ useEffect(() => {
     </div>
   )
 }
+
 
