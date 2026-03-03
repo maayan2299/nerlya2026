@@ -81,7 +81,9 @@ const MainDashboard = ({ onLogout }) => {
   const [showImagesModal, setShowImagesModal] = useState(null);
   const [showColorsModal, setShowColorsModal] = useState(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [categoryForm, setCategoryForm] = useState({ name: '', display_order: 0 });
+  const [categoryImageFile, setCategoryImageFile] = useState(null);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -150,6 +152,77 @@ const MainDashboard = ({ onLogout }) => {
     }
   };
 
+  const handleSaveCategory = async (e) => {
+    e.preventDefault();
+    if (!categoryForm.name.trim()) {
+      alert('אנא הזן שם קטגוריה');
+      return;
+    }
+
+    try {
+      let imageUrl = editingCategory?.image_url || null;
+      
+      if (categoryImageFile) {
+        imageUrl = await uploadImage(categoryImageFile);
+      }
+
+      if (editingCategory) {
+        await supabase.from('categories').update({
+          name: categoryForm.name.trim(),
+          image_url: imageUrl
+        }).eq('id', editingCategory.id);
+        alert('הקטגוריה עודכנה!');
+      } else {
+        const maxOrder = categories.length > 0 ? Math.max(...categories.map(c => c.display_order || 0)) : 0;
+        await supabase.from('categories').insert([{
+          name: categoryForm.name.trim(),
+          display_order: maxOrder + 1,
+          image_url: imageUrl
+        }]);
+        alert('הקטגוריה נוספה!');
+      }
+
+      setCategoryForm({ name: '', display_order: 0 });
+      setCategoryImageFile(null);
+      setShowCategoryModal(false);
+      setEditingCategory(null);
+      await loadData();
+    } catch (error) {
+      console.error('Error:', error);
+      alert('שגיאה בשמירת קטגוריה');
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    if (!confirm('למחוק את הקטגוריה? כל המוצרים בקטגוריה זו יאבדו את הקטגוריה שלהם.')) return;
+    
+    try {
+      await supabase.from('categories').delete().eq('id', categoryId);
+      alert('הקטגוריה נמחקה!');
+      await loadData();
+    } catch (error) {
+      console.error('Error:', error);
+      alert('שגיאה במחיקה');
+    }
+  };
+
+  const openEditCategoryModal = (category) => {
+    setEditingCategory(category);
+    setCategoryForm({
+      name: category.name,
+      display_order: category.display_order || 0
+    });
+    setCategoryImageFile(null);
+    setShowCategoryModal(true);
+  };
+
+  const openAddCategoryModal = () => {
+    setEditingCategory(null);
+    setCategoryForm({ name: '', display_order: 0 });
+    setCategoryImageFile(null);
+    setShowCategoryModal(true);
+  };
+
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.price) {
@@ -158,7 +231,6 @@ const MainDashboard = ({ onLogout }) => {
     }
 
     try {
-      // Calculate sale_price based on sale_type
       let finalSalePrice = null;
       if (formData.on_sale) {
         if (formData.sale_type === 'percentage' && formData.sale_percentage) {
@@ -170,7 +242,6 @@ const MainDashboard = ({ onLogout }) => {
       }
 
       if (editingProduct) {
-        // Update
         await supabase.from('products').update({
           name: formData.name,
           price: parseFloat(formData.price),
@@ -187,7 +258,6 @@ const MainDashboard = ({ onLogout }) => {
         
         alert('המוצר עודכן!');
       } else {
-        // Create
         const { data: newProduct, error } = await supabase.from('products').insert([{
           name: formData.name,
           price: parseFloat(formData.price),
@@ -376,32 +446,6 @@ const MainDashboard = ({ onLogout }) => {
     await loadData();
   };
 
-  const handleAddCategory = async (e) => {
-    e.preventDefault();
-    if (!categoryForm.name.trim()) {
-      alert('אנא הזן שם קטגוריה');
-      return;
-    }
-
-    try {
-      // Auto-assign display_order as the next available number
-      const maxOrder = categories.length > 0 ? Math.max(...categories.map(c => c.display_order || 0)) : 0;
-      
-      await supabase.from('categories').insert([{
-        name: categoryForm.name.trim(),
-        display_order: maxOrder + 1
-      }]);
-
-      alert('הקטגוריה נוספה בסוף הרשימה!');
-      setCategoryForm({ name: '', display_order: 0 });
-      setShowCategoryModal(false);
-      await loadData();
-    } catch (error) {
-      console.error('Error:', error);
-      alert('שגיאה בהוספת קטגוריה');
-    }
-  };
-
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !selectedCategory || p.category_id === parseInt(selectedCategory);
@@ -545,14 +589,12 @@ const MainDashboard = ({ onLogout }) => {
               {filteredProducts.map(product => (
                 <div key={product.id} style={{ background: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', transition: 'transform 0.2s', cursor: 'pointer', position: 'relative' }} onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
                   
-                  {/* Featured Star Badge */}
                   {product.is_featured && (
                     <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, background: '#fff', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                       ⭐
                     </div>
                   )}
 
-                  {/* Image */}
                   <div style={{ width: '100%', height: '250px', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {product.primary_image ? (
                       <img src={product.primary_image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -561,7 +603,6 @@ const MainDashboard = ({ onLogout }) => {
                     )}
                   </div>
 
-                  {/* Content */}
                   <div style={{ padding: '20px' }}>
                     <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#000' }}>{product.name}</h3>
                     <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>{product.category_name || 'ללא קטגוריה'}</p>
@@ -627,31 +668,40 @@ const MainDashboard = ({ onLogout }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '20px', fontWeight: '700' }}>ניהול קטגוריות</h2>
                 <button 
-                  onClick={() => setShowCategoryModal(true)}
+                  onClick={openAddCategoryModal}
                   style={{ background: '#000', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
                 >
                   + הוסף קטגוריה
                 </button>
               </div>
-              <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>להוספה/עריכה/מחיקה של קטגוריות, עבור ל-Supabase → Table Editor → categories</p>
               <div style={{ display: 'grid', gap: '12px' }}>
                 {categories.map(cat => {
                   const count = products.filter(p => p.category_id === cat.id).length;
                   return (
                     <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#f9f9f9', borderRadius: '4px' }}>
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{cat.name}</div>
-                        <div style={{ fontSize: '13px', color: '#666' }}>{count} מוצרים</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                        {cat.image_url && (
+                          <img src={cat.image_url} alt={cat.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
+                        )}
+                        <div>
+                          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{cat.name}</div>
+                          <div style={{ fontSize: '13px', color: '#666' }}>{count} מוצרים</div>
+                        </div>
                       </div>
-                      <button 
-                        onClick={() => {
-                          setSelectedCategory(cat.id.toString());
-                          setActiveTab('products');
-                        }} 
-                        style={{ background: '#000', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
-                      >
-                        צפה במוצרים
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => openEditCategoryModal(cat)} 
+                          style={{ padding: '8px 16px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                        >
+                          ערוך
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteCategory(cat.id)} 
+                          style={{ padding: '8px', background: '#fff', border: '1px solid #dc2626', color: '#dc2626', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -661,7 +711,67 @@ const MainDashboard = ({ onLogout }) => {
         )}
       </div>
 
-      {/* Add/Edit Modal */}
+      {/* Category Modal */}
+      {showCategoryModal && (
+        <div className="modal-overlay" onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: '700' }}>{editingCategory ? 'עריכת קטגוריה' : 'הוספת קטגוריה חדשה'}</h2>
+              <button onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+
+            <form onSubmit={handleSaveCategory}>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>שם הקטגוריה *</label>
+                  <input 
+                    type="text" 
+                    value={categoryForm.name} 
+                    onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})} 
+                    placeholder="לדוגמה: כוסות יין" 
+                    required 
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>תמונה ראשית</label>
+                  {editingCategory?.image_url && !categoryImageFile && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <img src={editingCategory.image_url} alt="Current" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '4px' }} />
+                    </div>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => setCategoryImageFile(e.target.files[0])} 
+                    style={{ padding: '8px' }} 
+                  />
+                  {!editingCategory && (
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>התמונה תופיע בעמוד הבית בסקשן "הקטגוריות שלנו"</div>
+                  )}
+                </div>
+
+                {!editingCategory && (
+                  <div style={{ padding: '12px', background: '#f0f9ff', border: '1px solid #bfdbfe', borderRadius: '4px', fontSize: '13px', color: '#1e40af' }}>
+                    💡 הקטגוריה תתוסף בסוף הרשימה. ניתן לשנות את הסדר אחר כך ב-Supabase.
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <button type="submit" disabled={uploading} style={{ flex: 1, padding: '14px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: '600', opacity: uploading ? 0.5 : 1 }}>
+                    {uploading ? 'שומר...' : (editingCategory ? 'שמור שינויים' : 'הוסף קטגוריה')}
+                  </button>
+                  <button type="button" onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }} style={{ padding: '14px 24px', background: '#fff', color: '#000', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' }}>
+                    ביטול
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Product Modal - קיים כמו שזה */}
       {(showAddModal || editingProduct) && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -733,7 +843,6 @@ const MainDashboard = ({ onLogout }) => {
                   
                   {formData.on_sale && (
                     <div>
-                      {/* בחירת סוג הנחה */}
                       <div style={{ marginBottom: '16px' }}>
                         <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', fontWeight: '600' }}>סוג ההנחה:</label>
                         <div style={{ display: 'flex', gap: '20px' }}>
@@ -762,7 +871,6 @@ const MainDashboard = ({ onLogout }) => {
                         </div>
                       </div>
 
-                      {/* שדות לפי סוג ההנחה */}
                       {formData.sale_type === 'percentage' ? (
                         <div>
                           <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>אחוז הנחה *</label>
@@ -908,46 +1016,6 @@ const MainDashboard = ({ onLogout }) => {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Category Modal */}
-      {showCategoryModal && (
-        <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '22px', fontWeight: '700' }}>הוספת קטגוריה חדשה</h2>
-              <button onClick={() => setShowCategoryModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
-            </div>
-
-            <form onSubmit={handleAddCategory}>
-              <div style={{ display: 'grid', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>שם הקטגוריה *</label>
-                  <input 
-                    type="text" 
-                    value={categoryForm.name} 
-                    onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})} 
-                    placeholder="לדוגמה: כוסות יין" 
-                    required 
-                  />
-                </div>
-
-                <div style={{ padding: '12px', background: '#f0f9ff', border: '1px solid #bfdbfe', borderRadius: '4px', fontSize: '13px', color: '#1e40af' }}>
-                  💡 הקטגוריה תתוסף בסוף הרשימה. ניתן לשנות את הסדר אחר כך ב-Supabase.
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                  <button type="submit" style={{ flex: 1, padding: '14px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: '600' }}>
-                    הוסף קטגוריה
-                  </button>
-                  <button type="button" onClick={() => setShowCategoryModal(false)} style={{ padding: '14px 24px', background: '#fff', color: '#000', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' }}>
-                    ביטול
-                  </button>
-                </div>
-              </div>
-            </form>
           </div>
         </div>
       )}
