@@ -80,6 +80,8 @@ const MainDashboard = ({ onLogout }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImagesModal, setShowImagesModal] = useState(null);
   const [showColorsModal, setShowColorsModal] = useState(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryForm, setCategoryForm] = useState({ name: '', display_order: 0 });
   
   // Form data
   const [formData, setFormData] = useState({
@@ -374,6 +376,32 @@ const MainDashboard = ({ onLogout }) => {
     await loadData();
   };
 
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    if (!categoryForm.name.trim()) {
+      alert('אנא הזן שם קטגוריה');
+      return;
+    }
+
+    try {
+      // Auto-assign display_order as the next available number
+      const maxOrder = categories.length > 0 ? Math.max(...categories.map(c => c.display_order || 0)) : 0;
+      
+      await supabase.from('categories').insert([{
+        name: categoryForm.name.trim(),
+        display_order: maxOrder + 1
+      }]);
+
+      alert('הקטגוריה נוספה בסוף הרשימה!');
+      setCategoryForm({ name: '', display_order: 0 });
+      setShowCategoryModal(false);
+      await loadData();
+    } catch (error) {
+      console.error('Error:', error);
+      alert('שגיאה בהוספת קטגוריה');
+    }
+  };
+
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !selectedCategory || p.category_id === parseInt(selectedCategory);
@@ -599,7 +627,7 @@ const MainDashboard = ({ onLogout }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '20px', fontWeight: '700' }}>ניהול קטגוריות</h2>
                 <button 
-                  onClick={() => window.open('https://supabase.com/dashboard/project/ormbbartqrpgtsmoqxhm/editor/28518', '_blank')}
+                  onClick={() => setShowCategoryModal(true)}
                   style={{ background: '#000', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
                 >
                   + הוסף קטגוריה
@@ -880,6 +908,46 @@ const MainDashboard = ({ onLogout }) => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Category Modal */}
+      {showCategoryModal && (
+        <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: '700' }}>הוספת קטגוריה חדשה</h2>
+              <button onClick={() => setShowCategoryModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+
+            <form onSubmit={handleAddCategory}>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>שם הקטגוריה *</label>
+                  <input 
+                    type="text" 
+                    value={categoryForm.name} 
+                    onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})} 
+                    placeholder="לדוגמה: כוסות יין" 
+                    required 
+                  />
+                </div>
+
+                <div style={{ padding: '12px', background: '#f0f9ff', border: '1px solid #bfdbfe', borderRadius: '4px', fontSize: '13px', color: '#1e40af' }}>
+                  💡 הקטגוריה תתוסף בסוף הרשימה. ניתן לשנות את הסדר אחר כך ב-Supabase.
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <button type="submit" style={{ flex: 1, padding: '14px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: '600' }}>
+                    הוסף קטגוריה
+                  </button>
+                  <button type="button" onClick={() => setShowCategoryModal(false)} style={{ padding: '14px 24px', background: '#fff', color: '#000', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' }}>
+                    ביטול
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
