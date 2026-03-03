@@ -447,19 +447,19 @@ const MainDashboard = ({ onLogout }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
               <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                 <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>סה"כ מוצרים</div>
-                <div style={{ fontSize: '32px', fontWeight: '700' }}>📦 {products.length}</div>
+                <div style={{ fontSize: '32px', fontWeight: '700' }}>{products.length}</div>
               </div>
               <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                 <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>קטגוריות</div>
-                <div style={{ fontSize: '32px', fontWeight: '700' }}>📁 {categories.length}</div>
+                <div style={{ fontSize: '32px', fontWeight: '700' }}>{categories.length}</div>
               </div>
               <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                 <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>מוצרים מומלצים</div>
-                <div style={{ fontSize: '32px', fontWeight: '700' }}>⭐ {products.filter(p => p.is_featured).length}</div>
+                <div style={{ fontSize: '32px', fontWeight: '700' }}>{products.filter(p => p.is_featured).length}</div>
               </div>
               <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                 <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>מוצרים במבצע</div>
-                <div style={{ fontSize: '32px', fontWeight: '700' }}>🏷️ {products.filter(p => p.on_sale).length}</div>
+                <div style={{ fontSize: '32px', fontWeight: '700' }}>{products.filter(p => p.on_sale).length}</div>
               </div>
             </div>
 
@@ -470,10 +470,19 @@ const MainDashboard = ({ onLogout }) => {
                 {categories.map(cat => {
                   const count = products.filter(p => p.category_id === cat.id).length;
                   return (
-                    <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f9f9f9', borderRadius: '4px' }}>
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setSelectedCategory(cat.id.toString());
+                        setActiveTab('products');
+                      }}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f9f9f9', borderRadius: '4px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'right' }}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#f0f0f0'}
+                      onMouseOut={(e) => e.currentTarget.style.background = '#f9f9f9'}
+                    >
                       <span style={{ fontSize: '15px', fontWeight: '500' }}>{cat.name}</span>
                       <span style={{ fontSize: '14px', color: '#666' }}>{count} מוצרים</span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -585,24 +594,37 @@ const MainDashboard = ({ onLogout }) => {
 
         {/* Categories Tab */}
         {activeTab === 'categories' && (
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>ניהול קטגוריות</h2>
-            <p style={{ color: '#666', marginBottom: '20px' }}>לניהול קטגוריות, גש לטבלת categories ב-Supabase</p>
-            <div style={{ display: 'grid', gap: '12px' }}>
-              {categories.map(cat => {
-                const count = products.filter(p => p.category_id === cat.id).length;
-                return (
-                  <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#f9f9f9', borderRadius: '4px' }}>
-                    <div>
-                      <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{cat.name}</div>
-                      <div style={{ fontSize: '13px', color: '#666' }}>{count} מוצרים בקטגוריה</div>
+          <div>
+            <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: '700' }}>ניהול קטגוריות</h2>
+                <button style={{ background: '#000', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+                  + הוסף קטגוריה
+                </button>
+              </div>
+              <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>להוספה/עריכה/מחיקה של קטגוריות, עבור ל-Supabase → Table Editor → categories</p>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {categories.map(cat => {
+                  const count = products.filter(p => p.category_id === cat.id).length;
+                  return (
+                    <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#f9f9f9', borderRadius: '4px' }}>
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{cat.name}</div>
+                        <div style={{ fontSize: '13px', color: '#666' }}>{count} מוצרים</div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setSelectedCategory(cat.id.toString());
+                          setActiveTab('products');
+                        }} 
+                        style={{ background: '#000', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                      >
+                        צפה במוצרים
+                      </button>
                     </div>
-                    <button onClick={() => setSelectedCategory(cat.id.toString())} style={{ background: '#000', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
-                      צפה במוצרים
-                    </button>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
