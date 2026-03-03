@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { supabaseUrl } from '../lib/supabase'
+import { useState, useEffect } from 'react'
+import { supabase, supabaseUrl } from '../lib/supabase'
 import AccessibilityMenu from '../components/AccessibilityMenu'
 import CartDrawer from '../components/CartDrawer'
 import Header from '../components/Header'
@@ -11,17 +12,15 @@ export default function HomePage() {
   // State לתמונת Instagram שנבחרה
   const [selectedInstagramImage, setSelectedInstagramImage] = useState('post4.jpg')
 
-  const categories = [
-    { id: 18, title: 'תפילות וברכונים', fileName: 'prayers.png' },
-    { id: 4, title: 'כיסוי טלית ותפילין', fileName: 'tallit-covers.png' },
-    { id: 5, title: 'נטלות', fileName: 'natlot.png' },
-    { id: 6, title: 'פמוטים', fileName: 'candlesticks.png' },
-    { id: 7, title: 'כוסות יין', fileName: 'wine-cups.png' },
-    { id: 8, title: 'מלחיות', fileName: 'salt-shakers.png' },
-    { id: 9, title: 'סט הבדלה', fileName: 'havdalah.png' },
-    { id: 17, title: 'מוצרי גבס', fileName: 'plaster.png' },
-    { id: 11, title: 'מוצרים נוספים', fileName: 'other.png' }
-  ]
+const [categories, setCategories] = useState([])
+
+useEffect(() => {
+  async function loadCategories() {
+    const { data } = await supabase.from('categories').select('*').order('display_order')
+    setCategories(data || [])
+  }
+  loadCategories()
+}, [])
 
   const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl
   const mainBannerUrl = `${baseUrl}/storage/v1/object/public/banners/banner.png`
@@ -93,8 +92,8 @@ export default function HomePage() {
               >
                 <div className="aspect-[4/5] rounded-lg md:rounded-2xl overflow-hidden shadow-md md:shadow-xl relative bg-gray-50">
                   <img 
-                    src={`${baseUrl}/storage/v1/object/public/categories/${cat.fileName}`} 
-                    alt={cat.title}
+                    src={cat.image_url}
+                    alt={cat.name}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     onError={(e) => {
                       e.target.style.display = 'none'
@@ -111,7 +110,7 @@ export default function HomePage() {
                   
                   <div className="absolute bottom-2 md:bottom-5 right-2 md:right-5 left-2 md:left-5 flex justify-between items-end z-20">
                     <h3 className="text-white text-sm md:text-xl font-medium drop-shadow-lg tracking-wide">
-                      {cat.title}
+                      {cat.name}
                     </h3>
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300">
                       <svg className="w-4 h-4 md:w-5 md:h-5 text-black transform rotate-180" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -331,3 +330,4 @@ export default function HomePage() {
     </div>
   )
 }
+
