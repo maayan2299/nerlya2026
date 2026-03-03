@@ -598,7 +598,10 @@ const MainDashboard = ({ onLogout }) => {
             <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '20px', fontWeight: '700' }}>ניהול קטגוריות</h2>
-                <button style={{ background: '#000', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+                <button 
+                  onClick={() => window.open('https://supabase.com/dashboard/project/ormbbartqrpgtsmoqxhm/editor/28518', '_blank')}
+                  style={{ background: '#000', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
+                >
                   + הוסף קטגוריה
                 </button>
               </div>
