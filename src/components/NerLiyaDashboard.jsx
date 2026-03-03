@@ -135,14 +135,14 @@ const MainDashboard = ({ onLogout }) => {
     setLoading(false);
   };
 
-  const uploadImage = async (file) => {
+  const uploadImage = async (file, bucket = 'product-images') => {
     if (!file) return null;
     try {
       setUploading(true);
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${file.name.split('.').pop()}`;
-      const { error } = await supabase.storage.from('product-images').upload(fileName, file);
+      const { error } = await supabase.storage.from(bucket).upload(fileName, file);
       if (error) throw error;
-      const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
+      const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
       setUploading(false);
       return data.publicUrl;
     } catch (error) {
@@ -163,7 +163,7 @@ const MainDashboard = ({ onLogout }) => {
       let imageUrl = editingCategory?.image_url || null;
       
       if (categoryImageFile) {
-        imageUrl = await uploadImage(categoryImageFile);
+        imageUrl = await uploadImage(categoryImageFile, 'categories');
       }
 
       if (editingCategory) {
