@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import Breadcrumbs from '../components/Breadcrumbs'
 
+const SUPABASE_URL = 'https://ormbbartqrpgtsmoqxhm.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWJiYXJ0cXJwZ3RzbW9xeGhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NTQwMzMsImV4cCI6MjA4MzUzMDAzM30.vcddF1aQahJTZfv7GNK7_onPR2dt-l_dmDCzEt-EnAg'
+
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { 
@@ -87,7 +90,6 @@ export default function CheckoutPage() {
     setIsSubmitting(true)
 
     try {
-      // שמירת פרטי הזמנה ב-sessionStorage לשימוש בדף ההצלחה
       const orderId = `NL-${Date.now()}`
       const orderData = {
         orderId,
@@ -108,11 +110,14 @@ export default function CheckoutPage() {
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
-      // קריאה ל-Vercel Function
       const baseUrl = window.location.origin
-      const response = await fetch('https://ormbbartqrpgtsmoqxhm.supabase.co/functions/v1/create-payment', {
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/create-payment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
         body: JSON.stringify({
           amount: finalTotal,
           orderId,
@@ -127,7 +132,6 @@ export default function CheckoutPage() {
       const data = await response.json()
 
       if (data.success && data.paymentUrl) {
-        // הפניה לדף התשלום של HYP
         window.location.href = data.paymentUrl
       } else {
         setPaymentError(data.error || 'שגיאה ביצירת דף התשלום. אנא נסה שוב.')
@@ -162,7 +166,6 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          {/* טופס */}
           <div className="lg:col-span-2">
             <form onSubmit={handleCheckout} className="space-y-8">
 
@@ -283,7 +286,6 @@ export default function CheckoutPage() {
                 </button>
               </div>
 
-              {/* אייקון אבטחה */}
               <div className="text-center text-sm text-gray-500 flex items-center justify-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
