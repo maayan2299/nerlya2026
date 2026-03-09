@@ -2,20 +2,24 @@
 import https from 'https'
 
 export default async function handler(req, res) {
-  // אפשר רק POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { amount, orderId, customerName, customerEmail, successUrl, errorUrl, cancelUrl } = req.body
+  const { amount, orderId, successUrl, errorUrl, cancelUrl } = req.body
 
   if (!amount || !orderId) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
 
-  const TERMINAL = process.env.HYP_TERMINAL || '5603951026'
-  const USERNAME = process.env.HYP_USERNAME || 'chplh'
-  const PASSWORD = process.env.HYP_PASSWORD || 'Nerlya2026!!'
+  const TERMINAL = process.env.HYP_TERMINAL
+  const USERNAME = process.env.HYP_USERNAME
+  const PASSWORD = process.env.HYP_PASSWORD
+
+  if (!TERMINAL || !USERNAME || !PASSWORD) {
+    console.error('Missing HYP environment variables')
+    return res.status(500).json({ success: false, error: 'Missing payment configuration' })
+  }
 
   const totalInAgorot = Math.round(parseFloat(amount) * 100)
 
@@ -31,7 +35,7 @@ export default async function handler(req, res) {
       <total>${totalInAgorot}</total>
       <transactionType>Debit</transactionType>
       <creditType>RegularCredit</creditType>
-      <currency>ILS</currency>
+      <currency>1</currency>
       <transactionCode>Internet</transactionCode>
       <validation>TxnSetup</validation>
       <uniqueid>${orderId}</uniqueid>
@@ -53,6 +57,7 @@ export default async function handler(req, res) {
         port: 443,
         path: '/xpo/Relay',
         method: 'POST',
+        agent: new https.Agent({ keepAlive: true }),
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Authorization': `Basic ${credentials}`,
@@ -89,7 +94,11 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('Payment API error:', error)
-    return res.status(500).json({ success: false, error: 'שגיאה בחיבור לשירות התשלומים' })
+    console.error('Payment API error FULL:', error)
+    console.error(error.stack)
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    })
   }
 }
