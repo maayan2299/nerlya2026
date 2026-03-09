@@ -1,5 +1,5 @@
 // api/create-payment.js
-// Vercel Serverless Function — שמרי בתיקיית /api בשורש הפרויקט
+import https from 'https'
 
 export default async function handler(req, res) {
   // אפשר רק POST
@@ -13,16 +13,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
 
-  // פרטי HYP — אלו יגיעו מ-Environment Variables ב-Vercel
   const TERMINAL = process.env.HYP_TERMINAL || '5603951026'
   const USERNAME = process.env.HYP_USERNAME || 'chplh'
-  const PASSWORD = process.env.HYP_PASSWORD || 'aaa123456789'
-  const HYP_URL = 'https://cg.creditguard.co.il/xpo/Relay'
+  const PASSWORD = process.env.HYP_PASSWORD || 'Nerlya2026!!'
 
-  // המרת סכום לאגורות (כפל ב-100)
   const totalInAgorot = Math.round(parseFloat(amount) * 100)
 
-  // בניית ה-XML לפי דוקומנטציה של HYP
   const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
 <ashrait>
   <request>
@@ -47,23 +43,36 @@ export default async function handler(req, res) {
   </request>
 </ashrait>`
 
-  try {
-    // שליחה ל-HYP עם Basic Auth
-    const credentials = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64')
+  const bodyData = new URLSearchParams({ int_in: xmlPayload }).toString()
+  const credentials = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64')
 
-    const hypResponse = await fetch(HYP_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${credentials}`
-      },
-      body: new URLSearchParams({ int_in: xmlPayload }).toString()
+  try {
+    const responseText = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'cg.creditguard.co.il',
+        port: 443,
+        path: '/xpo/Relay',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${credentials}`,
+          'Content-Length': Buffer.byteLength(bodyData)
+        }
+      }
+
+      const request = https.request(options, (response) => {
+        let data = ''
+        response.on('data', chunk => data += chunk)
+        response.on('end', () => resolve(data))
+      })
+
+      request.on('error', reject)
+      request.write(bodyData)
+      request.end()
     })
 
-    const responseText = await hypResponse.text()
     console.log('HYP Response:', responseText)
 
-    // חיפוש ה-URL בתוך ה-XML שחזר
     const urlMatch = responseText.match(/<mpiHostedPageUrl>([\s\S]*?)<\/mpiHostedPageUrl>/)
     const statusMatch = responseText.match(/<status>(.*?)<\/status>/)
     const messageMatch = responseText.match(/<statusText>(.*?)<\/statusText>/)
@@ -73,26 +82,14 @@ export default async function handler(req, res) {
 
     if (urlMatch && status === '000') {
       const paymentUrl = urlMatch[1].trim()
-      return res.status(200).json({ 
-        success: true, 
-        paymentUrl,
-        orderId 
-      })
+      return res.status(200).json({ success: true, paymentUrl, orderId })
     } else {
       console.error('HYP error:', status, message)
-      return res.status(400).json({ 
-        success: false, 
-        error: message,
-        status,
-        rawResponse: responseText
-      })
+      return res.status(400).json({ success: false, error: message, status, rawResponse: responseText })
     }
 
   } catch (error) {
     console.error('Payment API error:', error)
-    return res.status(500).json({ 
-      success: false, 
-      error: 'שגיאה בחיבור לשירות התשלומים' 
-    })
+    return res.status(500).json({ success: false, error: 'שגיאה בחיבור לשירות התשלומים' })
   }
 }
