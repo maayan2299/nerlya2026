@@ -110,7 +110,7 @@ export default function CheckoutPage() {
 
       // קריאה ל-Vercel Function
       const baseUrl = window.location.origin
-      const response = await fetch('/api/create-payment', {
+      const response = await fetch('https://ormbbartqrpgtsmoqxhm.supabase.co/functions/v1/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
