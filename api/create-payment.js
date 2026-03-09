@@ -53,7 +53,7 @@ export default async function handler(req, res) {
   try {
     const responseText = await new Promise((resolve, reject) => {
       const options = {
-        hostname: 'cg.creditguard.co.il',
+        hostname: 'secure.creditguard.co.il',
         port: 443,
         path: '/xpo/Relay',
         method: 'POST',
