@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     const bodyData = new URLSearchParams({ int_in: xmlPayload }).toString()
     const credentials = btoa(`${USERNAME}:${PASSWORD}`)
 
-    const response = await fetch('https://secure.creditguard.co.il/xpo/Relay', {
+    const response = await fetch('https://cguat2.creditguard.co.il/xpo/Relay', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
