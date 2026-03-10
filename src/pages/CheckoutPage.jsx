@@ -123,15 +123,18 @@ export default function CheckoutPage() {
           orderId,
           customerName: formData.fullName,
           customerEmail: formData.email,
-          successUrl: `${baseUrl}/payment-success`,
-          errorUrl: `${baseUrl}/payment-error`,
-          cancelUrl: `${baseUrl}/checkout`
+          customerPhone: formData.phone,
+          items: cart.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: parseFloat(item.sale_price || item.price) || 0
+          }))
         })
       })
 
       const data = await response.json()
 
-      if (data.success && data.paymentUrl) {
+      if (data.paymentUrl) {
         window.location.href = data.paymentUrl
       } else {
         setPaymentError(data.error || 'שגיאה ביצירת דף התשלום. אנא נסה שוב.')
