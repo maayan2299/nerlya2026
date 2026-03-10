@@ -1,98 +1,96 @@
-// supabase/functions/create-payment/index.ts
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-Deno.serve(async (req) => {
-  // CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  }
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { amount, orderId, successUrl, errorUrl, cancelUrl } = await req.json()
+    const body = await req.json()
+    const {
+      orderId,
+      amount,
+      customerName,
+      customerEmail,
+      customerPhone,
+      items,
+    } = body
 
-    if (!amount || !orderId) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    const MASOF = Deno.env.get('HYP_MASOF')!
+    const KEY = Deno.env.get('HYP_KEY')!
+    const PASSP = Deno.env.get('HYP_PASSP')!
 
-    const TERMINAL = Deno.env.get('HYP_TERMINAL') ?? ''
-    const USERNAME = Deno.env.get('HYP_USERNAME') ?? ''
-    const PASSWORD = Deno.env.get('HYP_PASSWORD') ?? ''
+    // Build heshDesc (invoice items) format: [0~ItemName~qty~price]
+    const heshDesc = items
+      .map((item: any) => `[0~${item.name}~${item.quantity}~${item.price}]`)
+      .join('')
 
-    // המרת סכום לאגורות
-    const totalInAgorot = Math.round(parseFloat(amount) * 100)
+    const nameParts = customerName.trim().split(' ')
+    const clientName = nameParts[0] || customerName
+    const clientLName = nameParts.slice(1).join(' ') || ''
 
-    const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
-<ashrait>
-  <request>
-    <version>2000</version>
-    <language>HEB</language>
-    <command>doDeal</command>
-    <doDeal>
-      <terminalNumber>${TERMINAL}</terminalNumber>
-      <cardNo>CGMPI</cardNo>
-      <total>${totalInAgorot}</total>
-      <transactionType>Debit</transactionType>
-      <creditType>RegularCredit</creditType>
-      <currency>1</currency>
-      <transactionCode>Internet</transactionCode>
-      <validation>TxnSetup</validation>
-      <uniqueid>${orderId}</uniqueid>
-      <mpiValidation>AutoComm</mpiValidation>
-      <successUrl>${successUrl}</successUrl>
-      <errorUrl>${errorUrl}</errorUrl>
-      <cancelUrl>${cancelUrl}</cancelUrl>
-    </doDeal>
-  </request>
-</ashrait>`
-
-    const bodyData = new URLSearchParams({ int_in: xmlPayload }).toString()
-    const credentials = btoa(`${USERNAME}:${PASSWORD}`)
-
-    const response = await fetch('https://cguat2.creditguard.co.il/xpo/Relay', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${credentials}`,
-      },
-      body: bodyData,
+    // Step 1: Get signed params from HYP
+    const signParams = new URLSearchParams({
+      action: 'APISign',
+      What: 'SIGN',
+      KEY,
+      PassP: PASSP,
+      Masof: MASOF,
+      Order: orderId,
+      Info: `הזמנה ${orderId}`,
+      Amount: String(amount),
+      UTF8: 'True',
+      UTF8out: 'True',
+      ClientName: clientName,
+      ClientLName: clientLName,
+      email: customerEmail,
+      cell: customerPhone,
+      Coin: '1',
+      PageLang: 'HEB',
+      Sign: 'True',
+      MoreData: 'True',
+      sendemail: 'True',
+      SendHesh: 'True',
+      heshDesc,
+      Tash: '12',
+      J5: 'False',
+      Postpone: 'False',
     })
 
-    const responseText = await response.text()
-    console.log('HYP Response:', responseText)
+    const signUrl = `https://pay.hyp.co.il/p/?${signParams.toString()}`
+    console.log('Signing URL:', signUrl)
 
-    const urlMatch = responseText.match(/<mpiHostedPageUrl>([\s\S]*?)<\/mpiHostedPageUrl>/)
-    const statusMatch = responseText.match(/<status>(.*?)<\/status>/)
-    const messageMatch = responseText.match(/<statusText>(.*?)<\/statusText>/)
+    const signResponse = await fetch(signUrl)
+    const signedParams = await signResponse.text()
+    console.log('Signed params:', signedParams)
 
-    const status = statusMatch ? statusMatch[1].trim() : 'unknown'
-    const message = messageMatch ? messageMatch[1].trim() : 'Unknown error'
-
-    if (urlMatch && status === '000') {
-      const paymentUrl = urlMatch[1].trim()
-      return new Response(
-        JSON.stringify({ success: true, paymentUrl, orderId }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    } else {
-      console.error('HYP error:', status, message)
-      return new Response(
-        JSON.stringify({ success: false, error: message, status }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (!signedParams || signedParams.toLowerCase().includes('error')) {
+      throw new Error(`HYP signing error: ${signedParams}`)
     }
 
-  } catch (error) {
-    console.error('Edge function error:', error)
+    // Step 2: Build payment page URL
+    const paymentUrl = `https://pay.hyp.co.il/p/?action=pay&${signedParams}`
+
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ paymentUrl }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+  } catch (error) {
+    console.error('Error:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
     )
   }
 })
