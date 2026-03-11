@@ -25,16 +25,11 @@ serve(async (req) => {
     const KEY = Deno.env.get('HYP_KEY')!
     const PASSP = Deno.env.get('HYP_PASSP')!
 
-    // Build heshDesc (invoice items) format: [0~ItemName~qty~price]
-    const heshDesc = items
-      .map((item: any) => `[0~${item.name}~${item.quantity}~${item.price}]`)
-      .join('')
-
     const nameParts = customerName.trim().split(' ')
     const clientName = nameParts[0] || customerName
     const clientLName = nameParts.slice(1).join(' ') || ''
 
-    // Step 1: Get signed params from HYP
+    // שלב 1: בקשת חתימה מ-HYP
     const signParams = new URLSearchParams({
       action: 'APISign',
       What: 'SIGN',
@@ -55,9 +50,8 @@ serve(async (req) => {
       Sign: 'True',
       MoreData: 'True',
       sendemail: 'True',
-      SendHesh: 'True',
-      heshDesc,
-      Tash: '12',
+      SendHesh: 'False', // שינוי 1: ביטול זמני של הפקת חשבונית כדי לבודד את התקלה
+      Tash: '1', // שינוי 2: הגבלה לתשלום אחד
       J5: 'False',
       Postpone: 'False',
     })
@@ -67,13 +61,13 @@ serve(async (req) => {
 
     const signResponse = await fetch(signUrl)
     const signedParams = await signResponse.text()
-    console.log('Signed params:', signedParams)
+    console.log('Signed params:', signedParams) // זה הלוג הכי קריטי שלנו עכשיו!
 
     if (!signedParams || signedParams.toLowerCase().includes('error')) {
       throw new Error(`HYP signing error: ${signedParams}`)
     }
 
-    // Step 2: Build payment page URL
+    // שלב 2: בניית כתובת התשלום
     const paymentUrl = `https://pay.hyp.co.il/p/?action=pay&${signedParams}`
 
     return new Response(
