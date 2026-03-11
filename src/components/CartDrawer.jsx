@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
-import { getImageUrl } from '../lib/products'
 
 export default function CartDrawer() {
   const { 
@@ -58,8 +57,9 @@ export default function CartDrawer() {
           ) : (
             <div className="space-y-4">
               {cart.map((item) => {
-                const itemImage = item.main_image_url ? getImageUrl(item.main_image_url) : null
-                const basePrice = parseFloat(item.price) || 0
+                // ✅ תמונה מ-images[] array
+                const itemImage = item.images?.[0] || item.main_image_url || null
+                const basePrice = parseFloat(item.sale_price || item.price) || 0
                 const engravingPrice = parseFloat(item.engravingPrice) || 0
                 const itemTotal = (basePrice + engravingPrice) * item.quantity
 
@@ -82,8 +82,15 @@ export default function CartDrawer() {
                     <div className="flex-1">
                       <h3 className="font-medium text-sm mb-1">{item.name}</h3>
                       
-                      {/* מחיר בסיס */}
-                      <p className="text-sm text-gray-600">₪{basePrice.toLocaleString('he-IL')}</p>
+                      {/* מחיר */}
+                      {item.sale_price ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-red-600 font-medium text-sm">₪{parseFloat(item.sale_price).toLocaleString('he-IL')}</span>
+                          <span className="text-gray-400 line-through text-xs">₪{parseFloat(item.price).toLocaleString('he-IL')}</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600">₪{basePrice.toLocaleString('he-IL')}</p>
+                      )}
                       
                       {/* חריטה אם יש */}
                       {item.engravingText && (
@@ -147,7 +154,7 @@ export default function CartDrawer() {
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">משלוח:</span>
                 <span className="font-medium">
-                  {getShipping() === 0 ? 'חינם' : `₪${getShipping()}`}
+                  {getShipping() === 0 ? <span className="text-green-600">חינם!</span> : `₪${getShipping()}`}
                 </span>
               </div>
               {getShipping() > 0 && (
