@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -87,7 +87,8 @@ serve(async (req) => {
         headers: { 
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
+          'Access-Control-Expose-Headers': 'Content-Type',
           'Content-Type': 'application/json'
         },
         status: 200,
@@ -104,7 +105,8 @@ serve(async (req) => {
         headers: { 
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
+          'Access-Control-Expose-Headers': 'Content-Type',
           'Content-Type': 'application/json'
         },
         status: 400,
