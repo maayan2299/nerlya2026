@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { crypto } from 'https://deno.land/std@0.168.0/crypto/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,12 +30,9 @@ serve(async (req) => {
     const clientName = nameParts[0] || customerName
     const clientLName = nameParts.slice(1).join(' ') || ''
 
-    // שלב 1: בקשת חתימה מ-HYP
-    const signParams = new URLSearchParams({
-      action: 'APISign',
-      What: 'SIGN',
-      KEY,
-      PassP: PASSP,
+    // ✅ בנה את פרמטרי התשלום (בלי KEY/PASSP)
+    const paymentParams = {
+      action: 'pay',
       Masof: MASOF,
       Order: orderId,
       Info: `הזמנה ${orderId}`,
@@ -47,28 +45,34 @@ serve(async (req) => {
       cell: customerPhone,
       Coin: '1',
       PageLang: 'HEB',
-      Sign: 'True',
-      MoreData: 'True',
-      sendemail: 'True',
-      SendHesh: 'False', // שינוי 1: ביטול זמני של הפקת חשבונית כדי לבודד את התקלה
-      Tash: '1', // שינוי 2: הגבלה לתשלום אחד
-      J5: 'False',
+      SendHesh: 'False',
+      Tash: '1',
       Postpone: 'False',
-    })
-
-    const signUrl = `https://pay.hyp.co.il/p/?${signParams.toString()}`
-    console.log('Signing URL:', signUrl)
-
-    const signResponse = await fetch(signUrl)
-    const signedParams = await signResponse.text()
-    console.log('Signed params:', signedParams) // זה הלוג הכי קריטי שלנו עכשיו!
-
-    if (!signedParams || signedParams.toLowerCase().includes('error')) {
-      throw new Error(`HYP signing error: ${signedParams}`)
     }
 
-    // שלב 2: בניית כתובת התשלום
-    const paymentUrl = `https://pay.hyp.co.il/p/?action=pay&${signedParams}`
+    // ✅ חתום עם HMAC-SHA256
+    const signString = Object.keys(paymentParams)
+      .sort()
+      .map(key => `${key}=${paymentParams[key]}`)
+      .join('&') + PASSP
+
+    const encoder = new TextEncoder()
+    const data = encoder.encode(signString)
+    const hashBuffer = await crypto.subtle.sign('HMAC', 
+      await crypto.subtle.importKey('raw', encoder.encode(KEY), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']),
+      data
+    )
+    
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+    paymentParams.Sign = hashHex
+
+    // ✅ בנה את כתובת התשלום
+    const params = new URLSearchParams(paymentParams)
+    const paymentUrl = `https://pay.hyp.co.il/p/?${params.toString()}`
+
+    console.log('Payment URL:', paymentUrl)
 
     return new Response(
       JSON.stringify({ paymentUrl }),
