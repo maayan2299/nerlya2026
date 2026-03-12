@@ -38,21 +38,20 @@ useEffect(() => {
 
   return (
     <>
-      {/* פס הכרזה עליון */}
-      <div className="bg-gray-50 text-black py-1.5 text-center border-b border-gray-200">
+      {/* פס הכרזה עליון - STICKY */}
+      <div className="sticky top-0 z-50 bg-gray-50 text-black py-1.5 text-center border-b border-gray-200">
         <p className="text-[10px] sm:text-xs font-medium px-4">
           נר-ליה • אור של קדושה בכל בית | <span className="text-red-600 font-bold">האתר אינו עובד בשבת</span>
         </p>
       </div>
 
-      {/* Header ראשי */}
+      {/* Header ראשי - STICKY מתחת לבנר */}
       <header 
-        className={`sticky top-0 z-40 transition-all duration-300 border-b border-gray-100 ${
-          scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-3'
+        className={`sticky top-[38px] z-40 transition-all duration-300 border-b border-gray-100 ${
+          scrolled ? 'bg-white shadow-md py-2' : 'bg-white py-3'
         }`}
       >
         <div className="w-full max-w-[1920px] mx-auto px-4">
-          {/* שימוש ב-Flexbox במקום Grid כדי לשלוט טוב יותר בשורה אחת */}
           <div className="flex items-center justify-between w-full">
             
             {/* צד ימין - לוגו */}
@@ -76,15 +75,13 @@ useEffect(() => {
               </Link>
             </div>
 
-            {/* מרכז - תפריט ניווט - כאן השינוי הגדול */}
-            {/* min-w-0 מונע גלישה, flex-1 נותן לו את כל המקום הפנוי */}
+            {/* מרכז - תפריט ניווט */}
             <nav className="hidden lg:flex items-center justify-center flex-1 px-4">
               <div className="flex items-center gap-x-4 xl:gap-x-6"> 
                 {categories.map((cat) => (
                   <Link 
                     key={cat.id} 
                     to={`/category/${cat.id}`}
-                    // שימי לב: text-xs במסכים רגילים, text-sm רק במסכים ענקיים
                     className="text-xs xl:text-sm font-medium text-gray-600 hover:text-black hover:underline underline-offset-4 transition-all duration-200 whitespace-nowrap"
                   >
                     {cat.name}
@@ -195,5 +192,3 @@ useEffect(() => {
     </>
   )
 }
-
-
