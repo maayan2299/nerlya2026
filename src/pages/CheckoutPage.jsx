@@ -429,19 +429,4 @@ export default function CheckoutPage() {
     </div>
   )
 }
-```
 
----
-
-# ✅ **עכשיו:**
-
-1. **תעתיקי את כל הקוד** (בחרי הכל, Ctrl+C)
-2. **פתחי את VS Code**
-3. **לכי ל-** `src/pages/CheckoutPage.jsx`
-4. **תחליפי** את כל הקוד בקוד החדש
-5. **שמרי** (Ctrl+S)
-6. **בTerminal:**
-```
-   git add .
-   git commit -m "Fix payment checkout"
-   git push origin main
