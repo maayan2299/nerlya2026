@@ -21,9 +21,9 @@ serve(async (req) => {
       items,
     } = body
 
-    const MASOF = "5603951026"
-    const KEY = "7baa4e8aaa128748b3a28bc6ed57bd45c0ad927b"
-    const PASSP = "EH6D5B307P"
+    const MASOF = Deno.env.get('HYP_MASOF')!
+    const KEY = Deno.env.get('HYP_KEY')!
+    const PASSP = Deno.env.get('HYP_PASSP')!
 
     const nameParts = customerName.trim().split(' ')
     const clientName = nameParts[0] || customerName
