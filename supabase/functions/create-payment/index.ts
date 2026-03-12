@@ -1,7 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
+<<<<<<< HEAD
   'Access-Control-Allow-Origin': 'https://nerlya.com,',
+=======
+  'Access-Control-Allow-Origin': 'https://nerlya.com',
+>>>>>>> f8945b6d52cc1b24404eeca808aed2330abebd55
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
