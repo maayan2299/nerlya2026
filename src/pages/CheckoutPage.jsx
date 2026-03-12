@@ -117,7 +117,7 @@ export default function CheckoutPage() {
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'Accept': 'application/json'
         },
-        referrerPolicy: 'no-referrer-when-downgrade',
+        referrerPolicy: 'no-referrer',
         body: JSON.stringify({
           amount: finalTotal,
           orderId,
@@ -410,3 +410,4 @@ export default function CheckoutPage() {
     </div>
   )
 }
+
