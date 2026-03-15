@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getProductById, getImageUrl } from '../lib/products'
+import { getProductById } from '../lib/products'
 import Breadcrumbs from '../components/Breadcrumbs'
 import { useCart } from '../context/CartContext'
 import CartDrawer from '../components/CartDrawer'
@@ -16,7 +16,9 @@ export default function ProductDetail() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [customText, setCustomText] = useState('') 
-  const [openAccordion, setOpenAccordion] = useState(null)
+  
+  // State חדש לאופציות שנבחרו
+  const [selectedOptions, setSelectedOptions] = useState({})
 
   useEffect(() => {
     async function fetchProduct() {
@@ -28,6 +30,15 @@ export default function ProductDetail() {
           return
         }
         setProduct(data)
+        
+        // אתחול אופציות ברירת מחדל (בוחר את האופציה הראשונה בכל קבוצה)
+        if (data.options && data.options.length > 0) {
+          const initial = {}
+          data.options.forEach(group => {
+            initial[group.title] = group.items[0]
+          })
+          setSelectedOptions(initial)
+        }
       } catch (err) {
         console.error('Failed to fetch product:', err)
         setError('Failed to load product.')
@@ -38,31 +49,30 @@ export default function ProductDetail() {
     if (id) fetchProduct()
   }, [id])
 
-  // חישוב מחיר חריטה דינמי לפי קטגוריה
+  // חישוב מחיר האופציות שנבחרו
+  const calculateOptionsPrice = () => {
+    return Object.values(selectedOptions).reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0)
+  }
+
   const calculateEngravingPrice = () => {
-    if (!product.engraving_available || !customText.trim()) {
-      return 0
-    }
-    
-    // קטגוריה 4 = כיסוי טלית ותפילין = 5₪ לאות
-    if (product.category_id === 4) {
-      return customText.trim().length * 5
-    }
-    
-    // שאר הקטגוריות = מחיר קבוע מה-DB
+    if (!product.engraving_available || !customText.trim()) return 0
+    if (product.category_id === 4) return customText.trim().length * 5
     return parseFloat(product.engraving_price) || 10
   }
 
-  // חישוב מחיר כולל (כולל הנחה)
   const calculateTotalPrice = () => {
     const onSale = product.on_sale && product.sale_price;
     const basePrice = onSale ? parseFloat(product.sale_price) : parseFloat(product.price) || 0;
-    const engravingPrice = calculateEngravingPrice();
-    return basePrice + engravingPrice;
+    return basePrice + calculateEngravingPrice() + calculateOptionsPrice();
   }
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, customText.trim() || null)
+    // אנחנו שולחים לסל גם את האופציות שנבחרו כדי שיופיעו בהזמנה
+    const productWithChoices = {
+      ...product,
+      selectedChoices: selectedOptions
+    }
+    addToCart(productWithChoices, quantity, customText.trim() || null)
     setCustomText('')
     setQuantity(1)
   }
@@ -70,22 +80,18 @@ export default function ProductDetail() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div></div>
   if (error || !product) return <div className="min-h-screen flex items-center justify-center bg-white"><button onClick={() => navigate('/')} className="px-6 py-3 bg-black text-white">חזרה לבית</button></div>
 
-  const images = product?.images?.map(img => img.image_url) || [product?.main_image_url].filter(Boolean)
+  const images = product?.images?.map(img => img.image_url) || [product?.image_url].filter(Boolean)
   const mainImage = images[selectedImageIndex]
-
-  const breadcrumbItems = [
-    { label: 'עמוד הבית', link: '/' },
-    { label: product.category?.name || 'מוצר', link: `/category/${product.category_id}` },
-    { label: product.name, link: null }
-  ]
-
-  const onSale = product.on_sale && product.sale_price;
 
   return (
     <div className="min-h-screen bg-white" dir="rtl">
       <CartDrawer />
       <Header />
-      <Breadcrumbs items={breadcrumbItems} />
+      <Breadcrumbs items={[
+        { label: 'עמוד הבית', link: '/' },
+        { label: product.category?.name || 'מוצר', link: `/category/${product.category_id}` },
+        { label: product.name, link: null }
+      ]} />
 
       <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
@@ -101,82 +107,90 @@ export default function ProductDetail() {
                 ))}
               </div>
             )}
-            <div className="flex-1 aspect-square bg-gray-50 border border-gray-200 overflow-hidden relative">
+            <div className="flex-1 aspect-square bg-gray-50 border border-gray-200 overflow-hidden">
               <img src={mainImage} className="w-full h-full object-cover" />
             </div>
           </div>
 
           {/* פרטי מוצר */}
           <div className="flex flex-col">
-            <h1 className="font-serif text-3xl md:text-4xl mb-4 font-normal">{product.name}</h1>
+            <h1 className="font-serif text-3xl md:text-4xl mb-2 font-normal">{product.name}</h1>
             
             <div className="mb-6">
-              {onSale ? (
-                <div className="flex items-baseline gap-3">
-                  <p className="text-lg text-gray-400 line-through font-light">
-                    ₪{parseFloat(product.price).toLocaleString('he-IL')}
-                  </p>
-                  <p className="text-3xl md:text-4xl font-normal text-gray-900">
-                    ₪{calculateTotalPrice().toLocaleString('he-IL')}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-2xl md:text-3xl font-normal">
-                  ₪{calculateTotalPrice().toLocaleString('he-IL')}
-                </p>
-              )}
+              <p className="text-3xl font-normal text-gray-900">
+                ₪{calculateTotalPrice().toLocaleString('he-IL')}
+              </p>
             </div>
+
+            {/* --- אופציות בחירה (טליתות וכו') --- */}
+            {product.options && product.options.length > 0 && (
+              <div className="space-y-6 mb-8 border-t border-gray-100 pt-6">
+                {product.options.map((group, idx) => (
+                  <div key={idx} className="space-y-3">
+                    <h3 className="font-bold text-gray-900 text-sm">{group.title}</h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      {group.items.map((item, itemIdx) => (
+                        <label 
+                          key={itemIdx} 
+                          className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${
+                            selectedOptions[group.title]?.name === item.name 
+                            ? 'border-black bg-gray-50' 
+                            : 'border-gray-200 hover:border-gray-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="radio"
+                              name={group.title}
+                              className="w-4 h-4 accent-black"
+                              checked={selectedOptions[group.title]?.name === item.name}
+                              onChange={() => setSelectedOptions({...selectedOptions, [group.title]: item})}
+                            />
+                            <span className="text-sm font-medium">{item.name}</span>
+                          </div>
+                          {item.price > 0 && (
+                            <span className="text-xs text-gray-500">+ ₪{item.price}</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* החלק של החריטה */}
             {product.engraving_available && (
               <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                <div className="mb-3">
-                  <p className="text-sm font-medium text-gray-900">
-                    {product.category_id === 4 ? (
-                      <>חריטת שם - ₪5 לכל אות</>
-                    ) : (
-                      <>חריטת שם - ₪{product.engraving_price || 10}</>
-                    )}
-                  </p>
-                  {product.category_id === 4 && customText.trim() && (
-                    <p className="text-xs text-amber-700 mt-1 bg-amber-50 inline-block px-2 py-1 rounded">
-                      {customText.trim().length} אותיות × ₪5 = ₪{customText.trim().length * 5}
-                    </p>
-                  )}
-                </div>
+                <p className="text-sm font-medium mb-2">חריטת שם אישית</p>
                 <input
                   type="text"
-                  placeholder="אז מה השם אמרנו? :)"
+                  placeholder="הקלידו שם לחריטה..."
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
-                  className="w-full p-3 text-right border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
+                  className="w-full p-3 text-right border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none bg-white"
                 />
               </div>
             )}
 
             {/* כפתורי רכישה */}
             <div className="flex items-center gap-4 mb-8">
-              <button onClick={handleAddToCart} className="flex-1 bg-black text-white py-4 font-medium hover:bg-gray-800 transition-all">
+              <button onClick={handleAddToCart} className="flex-1 bg-black text-white py-4 font-medium hover:bg-gray-800 transition-all uppercase tracking-wider">
                 הוספה לסל
               </button>
-              <div className="flex items-center border-2 border-gray-300">
-                <button onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)} className="w-12 h-[52px]">-</button>
-                <span className="w-12 h-[52px] flex items-center justify-center border-x-2 border-gray-300">{quantity}</span>
-                <button onClick={() => setQuantity(q => q + 1)} className="w-12 h-[52px]">+</button>
+              <div className="flex items-center border border-gray-300">
+                <button onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)} className="w-10 h-12">-</button>
+                <span className="w-10 h-12 flex items-center justify-center font-medium">{quantity}</span>
+                <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-12">+</button>
               </div>
             </div>
 
-            <h2 className="text-xl font-semibold mb-4">שווה לדעת!</h2>
-            <div className="space-y-3">
-              <div className="border border-gray-200 p-4 bg-gray-50 flex items-center gap-3">
-                <span className="text-sm">תיאור מוצר: {product.description}</span>
-              </div>
-              <div className="border border-gray-200 p-4 flex items-center gap-3 font-medium text-sm">
-                <span>משלוח חינם עד הבית להזמנות מעל ₪400</span>
-              </div>
-              <div className="border border-gray-200 p-4 flex items-center gap-3 font-medium text-sm">
-                <span>זמני אספקה 4-6 ימי עסקים</span>
-              </div>
+            <div className="space-y-4 border-t border-gray-100 pt-6">
+               <p className="text-sm text-gray-600 leading-relaxed"><span className="font-bold text-black">תיאור: </span>{product.description}</p>
+               <div className="flex flex-col gap-2 text-xs text-gray-500 font-medium">
+                  <div className="flex items-center gap-2">📦 משלוח חינם מעל ₪400</div>
+                  <div className="flex items-center gap-2">⏳ אספקה: 4-6 ימי עסקים</div>
+               </div>
             </div>
           </div>
         </div>
