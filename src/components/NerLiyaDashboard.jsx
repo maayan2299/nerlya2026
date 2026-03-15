@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
-  LayoutDashboard, Package, FolderTree, LogOut, Plus, 
-  Trash2, Edit, Save, X, Upload, ChevronRight, Settings,
-  CheckCircle2, AlertCircle
+  Package, FolderTree, Plus, Trash2, Edit, Save, X, Settings, 
+  CheckCircle2, AlertCircle, Upload 
 } from 'lucide-react';
 
 const NerLiyaDashboard = () => {
@@ -11,40 +10,35 @@ const NerLiyaDashboard = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState({ text: '', type: '' });
-
   const [isEditing, setIsEditing] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
   const [currentProduct, setCurrentProduct] = useState({
     name: '', price: '', category_id: '', description: '', image_url: '', options: []
   });
 
-  const [imageFile, setImageFile] = useState(null);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { data: catData } = await supabase.from('categories').select('*');
+      const { data: prodData } = await supabase.from('products').select('*, categories(name)');
+      setCategories(catData || []);
+      setProducts(prodData || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const { data: catData } = await supabase.from('categories').select('*');
-    const { data: prodData } = await supabase.from('products').select('*, categories(name)');
-    setCategories(catData || []);
-    setProducts(prodData || []);
-    setLoading(false);
-  };
-
-  const uploadImage = async (file, bucket) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from(bucket).upload(fileName, file);
-    if (uploadError) throw uploadError;
-    const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
+  const uploadImage = async (file) => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from('product-images').upload(fileName, file);
+    if (error) throw error;
+    const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
     return data.publicUrl;
-  };
-
-  const addOptionGroup = () => {
-    const newOptions = [...(currentProduct.options || []), { title: '', items: [{ name: '', price: 0 }] }];
-    setCurrentProduct({ ...currentProduct, options: newOptions });
   };
 
   const handleSaveProduct = async (e) => {
@@ -52,14 +46,12 @@ const NerLiyaDashboard = () => {
     setLoading(true);
     try {
       let imageUrl = currentProduct.image_url;
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile, 'product-images');
-      }
+      if (imageFile) imageUrl = await uploadImage(imageFile);
 
       const productData = {
         name: currentProduct.name,
         price: parseFloat(currentProduct.price),
-        category_id: currentProduct.category_id,
+        category_id: currentProduct.category_id || null,
         description: currentProduct.description,
         image_url: imageUrl,
         options: currentProduct.options || []
@@ -70,115 +62,93 @@ const NerLiyaDashboard = () => {
       } else {
         await supabase.from('products').insert([productData]);
       }
-
       setIsEditing(false);
-      setCurrentProduct({ name: '', price: '', category_id: '', description: '', image_url: '', options: [] });
-      setImageFile(null);
       fetchData();
-      setMessage({ text: 'המוצר נשמר בהצלחה', type: 'success' });
     } catch (error) {
-      setMessage({ text: 'שגיאה בשמירה', type: 'error' });
+      alert("שגיאה בשמירה");
     }
     setLoading(false);
   };
 
+  if (loading && products.length === 0) return <div className="p-10 text-center">טוען נתונים...</div>;
+
   return (
     <div className="min-h-screen bg-gray-50 flex" dir="rtl">
-      <div className="w-64 bg-white border-l border-gray-200 p-6">
-        <div className="flex items-center gap-2 mb-8 px-2">
-          <Settings className="text-amber-600 w-6 h-6" />
-          <span className="text-xl font-bold text-gray-800">ניהול נרליה</span>
+      <div className="w-64 bg-white border-l p-6">
+        <div className="flex items-center gap-2 mb-8 text-amber-600 font-bold text-xl">
+          <Settings /> ניהול נרליה
         </div>
-        <nav className="space-y-2">
-          <button onClick={() => setActiveTab('products')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${activeTab === 'products' ? 'bg-amber-50 text-amber-700' : 'text-gray-500'}`}>
-            <Package size={20} /> מוצרים
-          </button>
-        </nav>
+        <button onClick={() => setActiveTab('products')} className={`w-full flex items-center gap-2 p-3 rounded-lg ${activeTab === 'products' ? 'bg-amber-50 text-amber-700' : ''}`}>
+          <Package size={20} /> מוצרים
+        </button>
       </div>
 
       <div className="flex-1 p-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800">ניהול מוצרים</h1>
-            {!isEditing && (
-              <button onClick={() => setIsEditing(true)} className="bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                <Plus size={20} /> מוצר חדש
-              </button>
-            )}
-          </div>
+        <div className="flex justify-between mb-6">
+          <h1 className="text-2xl font-bold">ניהול מוצרים</h1>
+          {!isEditing && (
+            <button onClick={() => { setCurrentProduct({name:'', price:'', options:[]}); setIsEditing(true); }} className="bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+              <Plus size={20} /> מוצר חדש
+            </button>
+          )}
+        </div>
 
-          {isEditing ? (
-            <div className="bg-white rounded-2xl shadow-sm border p-8">
-              <form onSubmit={handleSaveProduct} className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <input placeholder="שם המוצר" className="w-full px-4 py-2 border rounded-lg" value={currentProduct.name} onChange={(e) => setCurrentProduct({...currentProduct, name: e.target.value})} />
-                  <input placeholder="מחיר" type="number" className="w-full px-4 py-2 border rounded-lg" value={currentProduct.price} onChange={(e) => setCurrentProduct({...currentProduct, price: e.target.value})} />
-                </div>
-                
-                <select className="w-full px-4 py-2 border rounded-lg" value={currentProduct.category_id} onChange={(e) => setCurrentProduct({...currentProduct, category_id: e.target.value})}>
-                  <option value="">בחר קטגוריה</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-
-                <div className="bg-gray-50 p-4 rounded-xl border">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold">אופציות (טליתות וכו')</h3>
-                    <button type="button" onClick={addOptionGroup} className="text-amber-600 text-sm border border-amber-600 px-2 py-1 rounded">+ הוסף קבוצה</button>
-                  </div>
-                  {currentProduct.options?.map((group, gIdx) => (
-                    <div key={gIdx} className="bg-white p-3 border rounded mb-3">
-                      <div className="flex gap-2 mb-2">
-                        <input placeholder="שם הקבוצה (למשל: סוג בד)" className="flex-1 border-b" value={group.title} onChange={(e) => {
-                          const newOpts = [...currentProduct.options];
-                          newOpts[gIdx].title = e.target.value;
-                          setCurrentProduct({...currentProduct, options: newOpts});
-                        }} />
-                        <button type="button" onClick={() => setCurrentProduct({...currentProduct, options: currentProduct.options.filter((_, i) => i !== gIdx)})}><X size={18} /></button>
-                      </div>
-                      {group.items.map((item, iIdx) => (
-                        <div key={iIdx} className="flex gap-2 mb-1">
-                          <input placeholder="שם" className="flex-1 text-sm border rounded px-2" value={item.name} onChange={(e) => {
-                            const newOpts = [...currentProduct.options];
-                            newOpts[gIdx].items[iIdx].name = e.target.value;
-                            setCurrentProduct({...currentProduct, options: newOpts});
-                          }} />
-                          <input placeholder="₪" type="number" className="w-20 text-sm border rounded px-2" value={item.price} onChange={(e) => {
-                            const newOpts = [...currentProduct.options];
-                            newOpts[gIdx].items[iIdx].price = e.target.value;
-                            setCurrentProduct({...currentProduct, options: newOpts});
-                          }} />
-                        </div>
-                      ))}
-                      <button type="button" className="text-xs text-blue-600" onClick={() => {
-                        const newOpts = [...currentProduct.options];
-                        newOpts[gIdx].items.push({name: '', price: 0});
-                        setCurrentProduct({...currentProduct, options: newOpts});
-                      }}>+ הוסף פריט</button>
+        {isEditing ? (
+          <form onSubmit={handleSaveProduct} className="bg-white p-6 rounded-xl border space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <input placeholder="שם המוצר" className="p-2 border rounded" value={currentProduct.name} onChange={e => setCurrentProduct({...currentProduct, name: e.target.value})} required />
+              <input placeholder="מחיר" type="number" className="p-2 border rounded" value={currentProduct.price} onChange={e => setCurrentProduct({...currentProduct, price: e.target.value})} required />
+            </div>
+            <select className="w-full p-2 border rounded" value={currentProduct.category_id} onChange={e => setCurrentProduct({...currentProduct, category_id: e.target.value})}>
+              <option value="">בחר קטגוריה</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            
+            <div className="border p-4 rounded-lg bg-gray-50">
+              <div className="flex justify-between mb-2">
+                <span className="font-bold">אופציות בחירה (כמו בטליתות)</span>
+                <button type="button" className="text-amber-600 text-sm" onClick={() => setCurrentProduct({...currentProduct, options: [...(currentProduct.options || []), {title: '', items: [{name: '', price: 0}]}]})}>+ הוסף קבוצה</button>
+              </div>
+              {currentProduct.options?.map((group, gIdx) => (
+                <div key={gIdx} className="bg-white p-3 border rounded mb-2">
+                  <input placeholder="כותרת (למשל: סוג בד)" className="w-full mb-2 font-bold border-b" value={group.title} onChange={e => {
+                    const newOps = [...currentProduct.options]; newOps[gIdx].title = e.target.value; setCurrentProduct({...currentProduct, options: newOps});
+                  }} />
+                  {group.items.map((item, iIdx) => (
+                    <div key={iIdx} className="flex gap-2 mb-1">
+                      <input placeholder="שם האופציה" className="flex-1 text-sm border p-1 rounded" value={item.name} onChange={e => {
+                        const newOps = [...currentProduct.options]; newOps[gIdx].items[iIdx].name = e.target.value; setCurrentProduct({...currentProduct, options: newOps});
+                      }} />
+                      <input placeholder="מחיר" type="number" className="w-20 text-sm border p-1 rounded" value={item.price} onChange={e => {
+                        const newOps = [...currentProduct.options]; newOps[gIdx].items[iIdx].price = e.target.value; setCurrentProduct({...currentProduct, options: newOps});
+                      }} />
                     </div>
                   ))}
                 </div>
-
-                <div className="flex gap-4">
-                  <button type="submit" className="flex-1 bg-amber-600 text-white py-3 rounded-xl font-bold">שמור מוצר</button>
-                  <button type="button" onClick={() => setIsEditing(false)} className="px-8 py-3 border rounded-xl">ביטול</button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {products.map((product) => (
-                <div key={product.id} className="bg-white p-4 rounded-xl border flex items-center gap-4">
-                  <img src={product.image_url} className="w-16 h-16 rounded-lg object-cover" />
-                  <div className="flex-1">
-                    <h3 className="font-bold">{product.name}</h3>
-                    <p className="text-sm text-gray-500">₪{product.price}</p>
-                  </div>
-                  <button onClick={() => { setCurrentProduct(product); setIsEditing(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={20} /></button>
-                </div>
               ))}
             </div>
-          )}
-        </div>
+
+            <div className="flex gap-2">
+              <button type="submit" className="bg-amber-600 text-white px-6 py-2 rounded-lg">שמור</button>
+              <button type="button" onClick={() => setIsEditing(false)} className="bg-gray-200 px-6 py-2 rounded-lg">ביטול</button>
+            </div>
+          </form>
+        ) : (
+          <div className="grid gap-2">
+            {products.map(p => (
+              <div key={p.id} className="bg-white p-3 border rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src={p.image_url} className="w-12 h-12 object-cover rounded" alt="" />
+                  <div>
+                    <div className="font-bold">{p.name}</div>
+                    <div className="text-sm text-gray-500">₪{p.price}</div>
+                  </div>
+                </div>
+                <button onClick={() => { setCurrentProduct(p); setIsEditing(true); }} className="p-2 text-blue-600"><Edit size={20}/></button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
