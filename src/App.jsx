@@ -9,6 +9,7 @@ import CheckoutPage from './pages/CheckoutPage'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentError from './pages/PaymentError'
+import CartDrawer from './components/CartDrawer'
 // ייבוא דשבורד
 import NerLiyaDashboard from './components/NerLiyaDashboard'
 
@@ -16,6 +17,9 @@ function App() {
   return (
     <CartProvider>
       <Router>
+        {/* המגירה כאן! מחוץ לנתיבים, כדי שתהיה זמינה תמיד מעל כל דף */}
+        <CartDrawer /> 
+        
         <Routes>
           {/* נתיבים ציבוריים ללקוחות */}
           <Route path="/" element={<HomePage />} />
