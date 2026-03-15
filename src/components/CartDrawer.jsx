@@ -23,8 +23,12 @@ export default function CartDrawer() {
         onClick={() => setIsCartOpen(false)}
       ></div>
 
-      {/* מגירת עגלה - תוקן המיקום לימין והוגדר רוחב רספונסיבי חכם */}
-      <div className="fixed top-0 right-0 h-full w-11/12 max-w-sm sm:max-w-md bg-white shadow-2xl z-[151] flex flex-col" dir="rtl">
+      {/* מגירת עגלה - הוגדר רוחב קשיח כדי למנוע קריסה של התצוגה */}
+      <div 
+        className="fixed top-0 right-0 h-full bg-white shadow-2xl z-[151] flex flex-col overflow-hidden" 
+        dir="rtl"
+        style={{ width: '100%', maxWidth: '420px', minWidth: '320px' }}
+      >
         
         {/* כותרת */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
