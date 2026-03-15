@@ -24,7 +24,7 @@ export default function CartDrawer() {
       ></div>
 
       {/* מגירת עגלה - תוקן המיקום לימין והוגדר רוחב רספונסיבי חכם */}
-      <div className="fixed top-0 right-0 h-full w-[85vw] sm:w-[400px] md:w-[450px] bg-white shadow-2xl z-[151] flex flex-col" dir="rtl">
+      <div className="fixed top-0 right-0 h-full w-11/12 max-w-sm sm:max-w-md bg-white shadow-2xl z-[151] flex flex-col" dir="rtl">
         
         {/* כותרת */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
@@ -168,16 +168,16 @@ export default function CartDrawer() {
               </div>
             </div>
             
-            <Link
+           <Link
               to="/cart"
               onClick={() => setIsCartOpen(false)}
-              className="flex items-center justify-center w-full bg-black text-white py-3 sm:py-4 font-medium hover:bg-gray-800 transition-colors mb-2 whitespace-nowrap rounded"
+              className="block text-center w-full bg-black text-white py-3 sm:py-4 font-medium hover:bg-gray-800 transition-colors mb-3 rounded"
             >
               מעבר לתשלום
             </Link>
             <button
               onClick={() => setIsCartOpen(false)}
-              className="flex items-center justify-center w-full border-2 border-black text-black py-3 sm:py-4 font-medium hover:bg-gray-50 transition-colors whitespace-nowrap rounded"
+              className="block text-center w-full border-2 border-black text-black py-3 sm:py-4 font-medium hover:bg-gray-50 transition-colors rounded"
             >
               המשך בקניות
             </button>
