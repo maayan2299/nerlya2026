@@ -58,7 +58,7 @@ export default function CartDrawer() {
             <div className="space-y-4">
               {cart.map((item) => {
                 // ✅ תקן - בדוק את כל האפשרויות של תמונה
-                const itemImage = item.image_url || item.images?.[0] || item.main_image_url || item.product_image || null
+                const itemImage = item.main_image_url || item.image_url || item.images?.[0]?.image_url || (typeof item.images?.[0] === 'string' ? item.images[0] : null) || item.product_image || null;
                 const basePrice = parseFloat(item.sale_price || item.price) || 0
                 const engravingPrice = parseFloat(item.engravingPrice) || 0
                 const itemTotal = (basePrice + engravingPrice) * item.quantity
