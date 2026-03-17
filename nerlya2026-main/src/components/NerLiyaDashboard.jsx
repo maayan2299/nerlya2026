@@ -163,7 +163,7 @@ const MainDashboard = ({ onLogout }) => {
       let imageUrl = editingCategory?.image_url || null;
       
       if (categoryImageFile) {
-        imageUrl = await uploadImage(categoryImageFile, 'categories');
+        imageUrl = await uploadImage(categoryImageFile, 'product-images');
       }
 
       if (editingCategory) {
@@ -1024,4 +1024,3 @@ const MainDashboard = ({ onLogout }) => {
 };
 
 export default AdminDashboard;
-
