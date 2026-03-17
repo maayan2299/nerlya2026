@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getProductById, getAddonsByCategory } from '../lib/products'  // ← נוסף getAddonsByCategory
-import { getProductById } from '../lib/products'
 import Breadcrumbs from '../components/Breadcrumbs'
 import { useCart } from '../context/CartContext'
 import CartDrawer from '../components/CartDrawer'
