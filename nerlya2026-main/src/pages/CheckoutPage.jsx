@@ -110,15 +110,6 @@ export default function CheckoutPage() {
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
-      console.log('📦 שליחת בקשת תשלום:', {
-        amount: finalTotal,
-        orderId,
-        customerName: formData.fullName,
-        customerEmail: formData.email,
-        customerPhone: formData.phone
-      })
-
-      // ✅ בקשה אל Edge Function עם CORS headers תקינים
       const response = await fetch(`${SUPABASE_URL}/functions/v1/create-payment`, {
         method: 'POST',
         headers: {
@@ -126,6 +117,7 @@ export default function CheckoutPage() {
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'Accept': 'application/json'
         },
+        referrerPolicy: 'no-referrer-when-downgrade',
         body: JSON.stringify({
           amount: finalTotal,
           orderId,
@@ -140,17 +132,13 @@ export default function CheckoutPage() {
         })
       })
 
-      console.log('📡 סטטוס התשובה:', response.status, response.statusText)
-
       if (!response.ok) {
         throw new Error(`HTTP Error: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('✅ קיבלנו תשובה:', data)
 
       if (data.paymentUrl) {
-        console.log('🔗 מעבר ל-HYP Pay:', data.paymentUrl)
         window.location.href = data.paymentUrl
       } else if (data.error) {
         setPaymentError(data.error)
@@ -191,7 +179,6 @@ export default function CheckoutPage() {
           <div className="lg:col-span-2">
             <form onSubmit={handleCheckout} className="space-y-8">
 
-              {/* פרטי לקוח */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">פרטי לקוח</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -234,7 +221,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* אופציית משלוח */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">אופציית משלוח</h2>
                 <div className="space-y-3">
@@ -264,7 +250,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* כתובת משלוח */}
               {formData.shippingMethod !== 'pickup' && (
                 <div className="bg-white border border-gray-200 p-6 rounded">
                   <h2 className="text-2xl font-bold mb-6">כתובת למשלוח</h2>
@@ -309,7 +294,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* ברכה */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">ברכה אישית</h2>
                 <textarea 
@@ -322,7 +306,6 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              {/* הערות */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">הערות להזמנה</h2>
                 <textarea 
@@ -335,7 +318,6 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              {/* כפתורים */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <button 
                   type="submit" 
@@ -372,7 +354,6 @@ export default function CheckoutPage() {
             </form>
           </div>
 
-          {/* סיכום הזמנה */}
           <div className="lg:col-span-1">
             <div className="bg-gray-50 border border-gray-200 p-6 rounded sticky top-4">
               <h2 className="text-xl font-bold mb-6">סיכום הזמנה</h2>
