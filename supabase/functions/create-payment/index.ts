@@ -21,7 +21,7 @@ serve(async (req) => {
       customerPhone,
     } = body
 
-    const MASOF = Deno.env.get('HYP_MASOF')
+    const MASOF = '4502249638'
     const KEY = Deno.env.get('HYP_KEY')
     const PASSP = Deno.env.get('HYP_PASSP')
 
