@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       <total>${totalInAgorot}</total>
       <transactionType>Debit</transactionType>
       <creditType>RegularCredit</creditType>
-      <currency>ILS</currency>
+      <currency>1</currency>
       <transactionCode>Internet</transactionCode>
       <validation>TxnSetup</validation>
       <uniqueid>${orderId}</uniqueid>
@@ -52,19 +52,17 @@ export default async function handler(req, res) {
 
   try {
     const responseText = await new Promise((resolve, reject) => {
-     const options = {
-      hostname: '194.90.113.16', // כתובת ה-IP הישירה של CreditGuard
-      port: 443,
-      path: '/xpo/Relay',
-      method: 'POST',
-      servername: 'secure5.creditguard.co.il', // חשוב מאוד כדי שה-SSL יעבוד
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${credentials}`,
-        'Content-Length': Buffer.byteLength(bodyData),
-        'Host': 'secure5.creditguard.co.il' // מכריח את השרת להבין לאן הגענו
-    }
+      const options = {
+        hostname: 'cg.pay-it.co.il', // כתובת חלופית של Hyp
+        port: 443,
+        path: '/xpo/Relay',
+        method: 'POST',
+       headers: {
+         'Content-Type': 'application/x-www-form-urlencoded',
+         'Authorization': `Basic ${credentials}`,
+         'Content-Length': Buffer.byteLength(bodyData)
   }
+}
       const request = https.request(options, (response) => {
         let data = ''
         response.on('data', chunk => data += chunk)
