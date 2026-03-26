@@ -120,11 +120,11 @@ export default function CheckoutPage() {
 
       const response = await fetch(`/api/create-payment`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Accept': 'application/json'
-        },
+        // הקוד החדש - בלי ה-Authorization
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
         referrerPolicy: 'no-referrer-when-downgrade',
         body: JSON.stringify({
           amount: finalTotal,
