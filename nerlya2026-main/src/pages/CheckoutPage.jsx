@@ -91,6 +91,8 @@ export default function CheckoutPage() {
 
     try {
       const orderId = `NL-${Date.now()}`
+      
+      // שמירת פרטי ההזמנה ב-Session כפי שעשית קודם
       const orderData = {
         orderId,
         items: cart,
@@ -110,51 +112,34 @@ export default function CheckoutPage() {
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/create-payment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Accept': 'application/json'
-        },
-        referrerPolicy: 'no-referrer-when-downgrade',
-        body: JSON.stringify({
-          amount: finalTotal,
-          orderId,
-          customerName: formData.fullName,
-          customerEmail: formData.email,
-          customerPhone: formData.phone,
-          items: cart.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: parseFloat(item.sale_price || item.price) || 0
-          }))
-        })
-      })
+      // המעקף: יצירת קישור ישיר ל-Hyp במקום פנייה ל-Supabase
+      const terminal = '4502249638'
+      const passp = '02G38L8Y5E'
+      
+      // בניית ה-URL עם כל הפרמטרים ש-Hyp צריך
+      const paymentUrl = new URL('https://pay.hyp.co.il/p/')
+      paymentUrl.searchParams.append('action', 'pay')
+      paymentUrl.searchParams.append('terminal', terminal)
+      paymentUrl.searchParams.append('passp', passp)
+      paymentUrl.searchParams.append('amount', finalTotal.toString())
+      paymentUrl.searchParams.append('currency', '1') // 1 זה ש"ח
+      paymentUrl.searchParams.append('full_name', formData.fullName)
+      paymentUrl.searchParams.append('email', formData.email)
+      paymentUrl.searchParams.append('phone', formData.phone)
+      paymentUrl.searchParams.append('description', `הזמנה ${orderId} - נרליה`)
+      paymentUrl.searchParams.append('success_url', 'https://nerlya.com/success')
+      paymentUrl.searchParams.append('cancel_url', 'https://nerlya.com/cart')
+      paymentUrl.searchParams.append('interface', 'api')
 
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl
-      } else if (data.error) {
-        setPaymentError(data.error)
-        setIsSubmitting(false)
-      } else {
-        setPaymentError('שגיאה ביצירת דף התשלום. אנא נסה שוב.')
-        setIsSubmitting(false)
-      }
+      // העברת המשתמש ישירות לדף התשלום
+      window.location.href = paymentUrl.toString()
 
     } catch (error) {
-      console.error('❌ שגיאת Checkout:', error)
+      console.error('❌ שגיאת מעבר לתשלום:', error)
       setPaymentError(`שגיאה בחיבור לשירות התשלומים: ${error.message}`)
       setIsSubmitting(false)
     }
   }
-
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
