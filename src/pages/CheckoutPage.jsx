@@ -118,7 +118,7 @@ export default function CheckoutPage() {
         customerPhone: formData.phone
       })
 
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/create-payment`, {
+      const response = await fetch(`/api/create-payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
