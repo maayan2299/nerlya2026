@@ -23,8 +23,12 @@ export default function CartDrawer() {
         onClick={() => setIsCartOpen(false)}
       ></div>
 
-      {/* מגירת עגלה - תוקן המיקום לימין והוגדר רוחב רספונסיבי חכם */}
-      <div className="fixed top-0 right-0 h-full w-[85vw] sm:w-[400px] md:w-[450px] bg-white shadow-2xl z-[151] flex flex-col" dir="rtl">
+      {/* מגירת עגלה - הוגדר רוחב קשיח כדי למנוע קריסה של התצוגה */}
+      <div 
+        className="fixed top-0 right-0 h-full bg-white shadow-2xl z-[151] flex flex-col overflow-hidden" 
+        dir="rtl"
+        style={{ width: '100%', maxWidth: '420px', minWidth: '320px' }}
+      >
         
         {/* כותרת */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
@@ -57,7 +61,8 @@ export default function CartDrawer() {
           ) : (
             <div className="space-y-4">
               {cart.map((item) => {
-                const itemImage = item.images?.[0] || item.main_image_url || null
+                // ✅ תקן - בדוק את כל האפשרויות של תמונה
+                const itemImage = item.main_image_url || item.image_url || item.images?.[0]?.image_url || (typeof item.images?.[0] === 'string' ? item.images[0] : null) || item.product_image || null;
                 const basePrice = parseFloat(item.sale_price || item.price) || 0
                 const engravingPrice = parseFloat(item.engravingPrice) || 0
                 const itemTotal = (basePrice + engravingPrice) * item.quantity
@@ -167,16 +172,16 @@ export default function CartDrawer() {
               </div>
             </div>
             
-            <Link
+           <Link
               to="/cart"
               onClick={() => setIsCartOpen(false)}
-              className="flex items-center justify-center w-full bg-black text-white py-3 sm:py-4 font-medium hover:bg-gray-800 transition-colors mb-2 whitespace-nowrap rounded"
+              className="block text-center w-full bg-black text-white py-3 sm:py-4 font-medium hover:bg-gray-800 transition-colors mb-3 rounded"
             >
               מעבר לתשלום
             </Link>
             <button
               onClick={() => setIsCartOpen(false)}
-              className="flex items-center justify-center w-full border-2 border-black text-black py-3 sm:py-4 font-medium hover:bg-gray-50 transition-colors whitespace-nowrap rounded"
+              className="block text-center w-full border-2 border-black text-black py-3 sm:py-4 font-medium hover:bg-gray-50 transition-colors rounded"
             >
               המשך בקניות
             </button>

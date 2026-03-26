@@ -50,7 +50,7 @@ export default function CartPage() {
             <div className="bg-white border border-gray-200 divide-y divide-gray-200">
               {cart.map((item) => {
                 // ✅ תמונה מ-images[] array
-                const itemImage = item.images?.[0] || item.main_image_url || null
+                const itemImage = item.main_image_url || item.images?.[0]?.image_url || (typeof item.images?.[0] === 'string' ? item.images[0] : null) || null;
                 const basePrice = parseFloat(item.sale_price || item.price) || 0
                 const engravingPrice = parseFloat(item.engravingPrice) || 0
                 const itemTotal = (basePrice + engravingPrice) * item.quantity

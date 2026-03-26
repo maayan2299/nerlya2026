@@ -101,3 +101,23 @@ export function clearProductsCache() {
   productsCache = null
   cacheTime = null
 }
+
+// ← נוסף: שליפת תוספות לפי קטגוריה (לטליתות)
+/**
+ * Get add-ons for a specific category
+ */
+export async function getAddonsByCategory(categoryId) {
+  const { data, error } = await supabase
+    .from('category_addons')
+    .select(`
+      product_addons (id, name, price)
+    `)
+    .eq('category_id', categoryId)
+
+  if (error) {
+    console.error('Error fetching addons:', error)
+    return []
+  }
+
+  return data?.map(row => row.product_addons).filter(Boolean) || []
+}

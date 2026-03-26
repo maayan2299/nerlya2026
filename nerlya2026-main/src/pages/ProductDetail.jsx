@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getProductById, getImageUrl } from '../lib/products'
+import { getProductById, getImageUrl, getAddonsByCategory } from '../lib/products' // ← נוסף: getAddonsByCategory
 import Breadcrumbs from '../components/Breadcrumbs'
 import { useCart } from '../context/CartContext'
 import CartDrawer from '../components/CartDrawer'
 import Header from '../components/Header'
+
+// ← נוסף: פסוקים לרקמה על הטרה
+const TALLIT_VERSES = [
+  'אשר קידשנו במצוותיו וציוונו להתעטף בציצית',
+  'ברוך אתה ה\' אלוהינו מלך העולם אשר קידשנו במצוותיו',
+  'שמע ישראל ה\' אלוהינו ה\' אחד',
+  'ואהבת לרעך כמוך',
+  'בשם ה\' אלוהי ישראל',
+]
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -17,6 +26,11 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1)
   const [customText, setCustomText] = useState('') 
   const [openAccordion, setOpenAccordion] = useState(null)
+  // ← נוסף: state לתוספות טלית
+  const [addons, setAddons] = useState([])
+  const [selectedAddons, setSelectedAddons] = useState({})
+  const [selectedVerse, setSelectedVerse] = useState('')
+  const [productNotes, setProductNotes] = useState('')
 
   useEffect(() => {
     async function fetchProduct() {
@@ -28,6 +42,11 @@ export default function ProductDetail() {
           return
         }
         setProduct(data)
+        // ← נוסף: טעינת תוספות רק לטליתות (category_id === 1)
+        if (data.category_id === 1) {
+          const fetchedAddons = await getAddonsByCategory(1)
+          setAddons(fetchedAddons)
+        }
       } catch (err) {
         console.error('Failed to fetch product:', err)
         setError('Failed to load product.')
@@ -43,14 +62,24 @@ export default function ProductDetail() {
     if (!product.engraving_available || !customText.trim()) {
       return 0
     }
-    
     // קטגוריה 4 = כיסוי טלית ותפילין = 5₪ לאות
     if (product.category_id === 4) {
       return customText.trim().length * 5
     }
-    
     // שאר הקטגוריות = מחיר קבוע מה-DB
     return parseFloat(product.engraving_price) || 10
+  }
+
+  // ← נוסף: toggle תוספת
+  const toggleAddon = (addonId) => {
+    setSelectedAddons(prev => ({ ...prev, [addonId]: !prev[addonId] }))
+  }
+
+  // ← נוסף: חישוב מחיר תוספות
+  const calculateAddonsPrice = () => {
+    return addons
+      .filter(a => selectedAddons[a.id])
+      .reduce((sum, a) => sum + parseFloat(a.price), 0)
   }
 
   // חישוב מחיר כולל (כולל הנחה)
@@ -58,13 +87,17 @@ export default function ProductDetail() {
     const onSale = product.on_sale && product.sale_price;
     const basePrice = onSale ? parseFloat(product.sale_price) : parseFloat(product.price) || 0;
     const engravingPrice = calculateEngravingPrice();
-    return basePrice + engravingPrice;
+    return basePrice + engravingPrice + calculateAddonsPrice(); // ← נוסף: + calculateAddonsPrice()
   }
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, customText.trim() || null)
+    const chosenAddons = addons.filter(a => selectedAddons[a.id]) // ← נוסף
+    addToCart(product, quantity, customText.trim() || null, chosenAddons, selectedVerse, productNotes) // ← נוסף פרמטרים
     setCustomText('')
     setQuantity(1)
+    setSelectedAddons({})   // ← נוסף
+    setSelectedVerse('')    // ← נוסף
+    setProductNotes('')     // ← נוסף
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div></div>
@@ -153,6 +186,67 @@ export default function ProductDetail() {
                 />
               </div>
             )}
+
+            {/* ← נוסף: סקשן תוספות — מופיע רק לטליתות */}
+            {product.category_id === 1 && (
+              <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50 flex flex-col gap-4">
+
+                {/* פסוק לרקמה */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-800">
+                    * בחרו פסוק לרקמה על הטרה :
+                  </label>
+                  <select
+                    value={selectedVerse}
+                    onChange={e => setSelectedVerse(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-4 py-3 bg-white text-right focus:outline-none focus:border-black text-sm"
+                  >
+                    <option value="">— בחרו פסוק —</option>
+                    {TALLIT_VERSES.map(v => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* checkboxes תוספות */}
+                {addons.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    {addons.map(addon => (
+                      <label key={addon.id} className="flex items-center justify-between gap-3 cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={!!selectedAddons[addon.id]}
+                            onChange={() => toggleAddon(addon.id)}
+                            className="w-5 h-5 cursor-pointer accent-black"
+                          />
+                          <span className="text-sm text-gray-800">{addon.name}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-orange-600">
+                          ₪{parseFloat(addon.price).toFixed(2)}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {/* הערות */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-800">
+                    הוסיפו הערות למוצר במידת הצורך :
+                  </label>
+                  <textarea
+                    value={productNotes}
+                    onChange={e => setProductNotes(e.target.value)}
+                    rows={3}
+                    placeholder="לדוגמה: מידות מיוחדות, צבע מועדף..."
+                    className="w-full border border-gray-300 rounded px-4 py-3 text-sm bg-white resize-none focus:outline-none focus:border-black"
+                  />
+                </div>
+
+              </div>
+            )}
+            {/* ← סוף סקשן תוספות */}
 
             {/* כפתורי רכישה */}
             <div className="flex items-center gap-4 mb-8">

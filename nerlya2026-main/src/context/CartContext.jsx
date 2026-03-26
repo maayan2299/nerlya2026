@@ -32,12 +32,15 @@ export function CartProvider({ children }) {
   }, [cart])
 
   // הוסף מוצר לעגלה (עם תמיכה בחריטה חכמה!)
-  const addToCart = (product, quantity = 1, engravingText = null) => {
+  // ← נוסף: פרמטרים addons, verse, notes לתמיכה בתוספות טלית
+  const addToCart = (product, quantity = 1, engravingText = null, addons = [], verse = '', notes = '') => {
     setCart(prevCart => {
       // צור מזהה ייחודי למוצר (כולל חריטה אם יש)
+      // ← נוסף: המזהה כולל גם את התוספות שנבחרו
+      const addonsKey = addons.map(a => a.id).sort().join(',')
       const uniqueId = engravingText 
-        ? `${product.id}-engraved-${engravingText}` 
-        : product.id
+        ? `${product.id}-engraved-${engravingText}-${addonsKey}`
+        : `${product.id}-${addonsKey}-${verse}`
       
       // חישוב מחיר חריטה חכם לפי קטגוריה
       let engravingPrice = 0
@@ -50,6 +53,9 @@ export function CartProvider({ children }) {
           engravingPrice = parseFloat(product.engraving_price) || 10
         }
       }
+
+      // ← נוסף: חישוב מחיר תוספות
+      const addonsPrice = addons.reduce((sum, a) => sum + parseFloat(a.price || 0), 0)
       
       // בדוק אם המוצר (עם אותה חריטה) כבר קיים בעגלה
       const existingItem = prevCart.find(item => {
@@ -73,7 +79,11 @@ export function CartProvider({ children }) {
           quantity,
           uniqueId,
           engravingText,
-          engravingPrice
+          engravingPrice,
+          selectedAddons: addons,   // ← נוסף
+          addonsPrice,              // ← נוסף
+          selectedVerse: verse,     // ← נוסף
+          productNotes: notes,      // ← נוסף
         }
         return [...prevCart, newItem]
       }
@@ -110,11 +120,15 @@ export function CartProvider({ children }) {
   }
 
   // חשב סכום ביניים (כולל חריטה!)
+  // ← נוסף: מחשב גם addonsPrice + מחיר מבצע
   const getSubtotal = () => {
     return cart.reduce((total, item) => {
-      const basePrice = parseFloat(item.price) || 0
+      const basePrice = (item.on_sale && item.sale_price)
+        ? parseFloat(item.sale_price)
+        : parseFloat(item.price) || 0
       const engravingPrice = parseFloat(item.engravingPrice) || 0
-      const itemTotal = (basePrice + engravingPrice) * item.quantity
+      const addonsPrice = parseFloat(item.addonsPrice) || 0  // ← נוסף
+      const itemTotal = (basePrice + engravingPrice + addonsPrice) * item.quantity
       return total + itemTotal
     }, 0)
   }

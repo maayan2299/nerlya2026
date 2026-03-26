@@ -118,7 +118,6 @@ export default function CheckoutPage() {
         customerPhone: formData.phone
       })
 
-      // ✅ בקשה אל Edge Function עם CORS headers תקינים
       const response = await fetch(`${SUPABASE_URL}/functions/v1/create-payment`, {
         method: 'POST',
         headers: {
@@ -126,6 +125,7 @@ export default function CheckoutPage() {
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'Accept': 'application/json'
         },
+        referrerPolicy: 'no-referrer-when-downgrade',
         body: JSON.stringify({
           amount: finalTotal,
           orderId,
@@ -181,8 +181,24 @@ export default function CheckoutPage() {
         <h1 className="text-3xl md:text-4xl font-bold mb-8">תשלום והזמנה</h1>
 
         {paymentError && (
-          <div className="mb-6 bg-red-50 border-2 border-red-400 p-4 text-red-700 font-medium rounded">
-            ⚠️ {paymentError}
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">שגיאה בתשלום</h3>
+              </div>
+              <p className="text-gray-600 mb-6 leading-relaxed">{paymentError}</p>
+              <button
+                onClick={() => setPaymentError('')}
+                className="w-full bg-black text-white py-3 font-medium rounded hover:bg-gray-800 transition-colors"
+              >
+                חזור ונסה שוב
+              </button>
+            </div>
           </div>
         )}
 
@@ -429,4 +445,3 @@ export default function CheckoutPage() {
     </div>
   )
 }
-

@@ -14,7 +14,6 @@ export async function getProducts() {
   if (productsCache && cacheTime && (now - cacheTime < CACHE_DURATION)) {
     return productsCache
   }
-
   // טען מוצרים עם הקטגוריות והתמונות שלהם
   const { data: products, error } = await supabase
     .from('products')
@@ -25,12 +24,10 @@ export async function getProducts() {
     `)
     .eq('is_active', true)  // 👈 רק מוצרים פעילים!
     .order('display_order', { ascending: true })
-
   if (error) {
     console.error('Error fetching products:', error)
     throw error
   }
-
   // עיבוד הנתונים - הוסף את שם הקטגוריה והתמונה הראשית
   const processedProducts = products.map(product => ({
     ...product,
@@ -38,11 +35,9 @@ export async function getProducts() {
     main_image_url: product.product_images?.find(img => img.is_primary)?.image_url || 
                     product.product_images?.[0]?.image_url || null
   }))
-
   // שמור ב-cache
   productsCache = processedProducts
   cacheTime = now
-
   return processedProducts
 }
 
@@ -60,16 +55,13 @@ export async function getProductById(productId) {
     .eq('id', productId)
     .eq('is_active', true)  // 👈 גם פה - רק מוצרים פעילים!
     .single()
-
   if (productError) {
     console.error('Error fetching product:', productError)
     throw productError
   }
-
   if (!product) {
     return null
   }
-
   return {
     ...product,
     category: product.categories?.name,
@@ -88,7 +80,6 @@ export function getImageUrl(imageUrl) {
   if (imageUrl.startsWith('http')) {
     return imageUrl
   }
-
   // אם זה רק שם קובץ - בנה URL מלא
   const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl
   return `${baseUrl}/storage/v1/object/public/product-images/${imageUrl}`
@@ -100,4 +91,19 @@ export function getImageUrl(imageUrl) {
 export function clearProductsCache() {
   productsCache = null
   cacheTime = null
+}
+
+// ← נוסף: שליפת תוספות לפי קטגוריה (לטליתות)
+export async function getAddonsByCategory(categoryId) {
+  const { data, error } = await supabase
+    .from('category_addons')
+    .select(`
+      product_addons (id, name, price)
+    `)
+    .eq('category_id', categoryId)
+  if (error) {
+    console.error('Error fetching addons:', error)
+    return []
+  }
+  return data?.map(row => row.product_addons).filter(Boolean) || []
 }
