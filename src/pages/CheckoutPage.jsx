@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext'
 import Breadcrumbs from '../components/Breadcrumbs'
 
 const SUPABASE_URL = 'https://ormbbartqrpgtsmoqxhm.supabase.co'
+// המפתח שלך כבר כאן, הוא משמש לאימות מול הפונקציה
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWJiYXJ0cXJwZ3RzbW9xeGhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NTQwMzMsImV4cCI6MjA4MzUzMDAzM30.vcddF1aQahJTZfv7GNK7_onPR2dt-l_dmDCzEt-EnAg'
 
 export default function CheckoutPage() {
@@ -91,6 +92,8 @@ export default function CheckoutPage() {
 
     try {
       const orderId = `NL-${Date.now()}`
+      
+      // הכנת נתוני ההזמנה ל-SessionStorage
       const orderData = {
         orderId,
         items: cart,
@@ -110,59 +113,38 @@ export default function CheckoutPage() {
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
-      console.log('📦 שליחת בקשת תשלום:', {
-        amount: finalTotal,
-        orderId,
-        customerName: formData.fullName,
-        customerEmail: formData.email,
-        customerPhone: formData.phone
-      })
-
-      const response = await fetch(`/api/create-payment`, {
+      // קריאה ל-Supabase Edge Function במקום ל-Vercel
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/create-payment`, {
         method: 'POST',
-        // הקוד החדש - בלי ה-Authorization
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-        referrerPolicy: 'no-referrer-when-downgrade',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
         body: JSON.stringify({
           amount: finalTotal,
           orderId,
           customerName: formData.fullName,
           customerEmail: formData.email,
-          customerPhone: formData.phone,
-          items: cart.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: parseFloat(item.sale_price || item.price) || 0
-          }))
+          customerPhone: formData.phone
         })
       })
 
-      console.log('📡 סטטוס התשובה:', response.status, response.statusText)
-
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`)
+        const errorData = await response.json()
+        throw new Error(errorData.error || `שגיאת שרת: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('✅ קיבלנו תשובה:', data)
 
       if (data.paymentUrl) {
-        console.log('🔗 מעבר ל-HYP Pay:', data.paymentUrl)
         window.location.href = data.paymentUrl
-      } else if (data.error) {
-        setPaymentError(data.error)
-        setIsSubmitting(false)
       } else {
-        setPaymentError('שגיאה ביצירת דף התשלום. אנא נסה שוב.')
-        setIsSubmitting(false)
+        throw new Error('לא התקבל קישור לתשלום מהשרת')
       }
 
     } catch (error) {
-      console.error('❌ שגיאת Checkout:', error)
-      setPaymentError(`שגיאה בחיבור לשירות התשלומים: ${error.message}`)
+      console.error('❌ שגיאת תשלום:', error)
+      setPaymentError(`לא הצלחנו לחבר אותך לתשלום: ${error.message}`)
       setIsSubmitting(false)
     }
   }
@@ -203,10 +185,8 @@ export default function CheckoutPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
           <div className="lg:col-span-2">
             <form onSubmit={handleCheckout} className="space-y-8">
-
               {/* פרטי לקוח */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">פרטי לקוח</h2>
@@ -378,13 +358,6 @@ export default function CheckoutPage() {
                   ← חזרה לעגלה
                 </button>
               </div>
-
-              <div className="text-center text-sm text-gray-500 flex items-center justify-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                </svg>
-                תשלום מאובטח דרך HYP Pay — מוצפן SSL
-              </div>
             </form>
           </div>
 
@@ -439,7 +412,6 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
-
         </div>
       </main>
     </div>
