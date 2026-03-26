@@ -53,17 +53,18 @@ export default async function handler(req, res) {
   try {
     const responseText = await new Promise((resolve, reject) => {
       const options = {
-        hostname: 'secure.creditguard.co.il',
-        port: 443,
-        path: '/xpo/Relay',
-        method: 'POST',
-        agent: new https.Agent({ keepAlive: true }),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${credentials}`,
-          'Content-Length': Buffer.byteLength(bodyData)
-        }
-      }
+  hostname: 'secure.creditguard.co.il',
+  port: 443,
+  path: '/xpo/Relay',
+  method: 'POST',
+  agent: new https.Agent({ keepAlive: true }),
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Authorization': `Basic ${credentials}`,
+    'Content-Length': Buffer.byteLength(bodyData),
+    'Referer': 'https://nerlya.com'
+  }
+}
 
       const request = https.request(options, (response) => {
         let data = ''
