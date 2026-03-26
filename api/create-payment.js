@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       <total>${totalInAgorot}</total>
       <transactionType>Debit</transactionType>
       <creditType>RegularCredit</creditType>
-      <currency>1</currency>
+      <currency>ILS</currency>
       <transactionCode>Internet</transactionCode>
       <validation>TxnSetup</validation>
       <uniqueid>${orderId}</uniqueid>
