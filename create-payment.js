@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   // פרטי HYP — אלו יגיעו מ-Environment Variables ב-Vercel
   const TERMINAL = process.env.HYP_TERMINAL || '4502249638'
   const USERNAME = process.env.HYP_USERNAME || 'chplh'
-  const PASSWORD = process.env.HYP_PASSWORD || 'aaa123456789'
+  const PASSWORD = process.env.HYP_PASSWORD || '02G38L8Y5E'
   const HYP_URL = 'https://cg.creditguard.co.il/xpo/Relay'
 
   // המרת סכום לאגורות (כפל ב-100)
