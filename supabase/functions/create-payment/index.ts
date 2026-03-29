@@ -27,83 +27,26 @@ serve(async (req) => {
     const PASSP = Deno.env.get('HYP_PASSP')
 
     if (!MASOF || !KEY || !PASSP) {
-      console.error('Missing HYP credentials:', {
-        MASOF: !!MASOF,
-        KEY: !!KEY,
-        PASSP: !!PASSP,
-      })
-      throw new Error('Missing payment configuration')
+      throw new Error('Missing HYP credentials')
     }
 
     const nameParts = customerName.trim().split(' ')
     const clientName = nameParts[0] || customerName
     const clientLName = nameParts.slice(1).join(' ') || ''
 
-    // בנה את הפרמטרים לפי HYP Pay API docs - Pay Protocol
-    const paymentParams = {
+    // ==========================================
+    // STEP 1: APISign Request (לפי המדריך)
+    // ==========================================
+    
+    const apiSignParams = {
       action: 'APISign',
       What: 'SIGN',
-      Masof: MASOF,
       KEY: KEY,
       PassP: PASSP,
+      Masof: MASOF,
       Order: orderId,
       Info: `Order ${orderId}`,
       Amount: String(Math.round(amount * 100)), // סכום בסנטים
-      UTF8: 'True',
-      UTF8out: 'True',
-      ClientName: clientName,
-      ClientLName: clientLName,
-      email: customerEmail,
-      cell: customerPhone,
-      Coin: '1', // 1 = שקל
-      PageLang: 'HEB',
-      Tash: '1',
-      FixTash: 'False',
-      Postpone: 'False',
-      J5: 'False',
-      Sign: 'True',
-      MoreData: 'True',
-    }
-
-    console.log('Calling HYP APISign with params:', {
-      Masof: MASOF,
-      Order: orderId,
-      Amount: paymentParams.Amount,
-    })
-
-    // שלב 1: קרא ל-APISign לקבלת signature
-    const apiSignUrl = new URL('https://pay.hyp.co.il/p/')
-    Object.entries(paymentParams).forEach(([key, value]) => {
-      apiSignUrl.searchParams.append(key, value)
-    })
-
-    console.log('APISign URL (first 100 chars):', apiSignUrl.toString().substring(0, 100))
-
-    const apiSignResponse = await fetch(apiSignUrl.toString(), {
-      method: 'GET',
-    })
-
-    const apiSignText = await apiSignResponse.text()
-    console.log('APISign response:', apiSignText.substring(0, 200))
-
-    // פרסר את התשובה (היא בפורמט query string)
-    const apiSignParams = new URLSearchParams(apiSignText)
-    const signature = apiSignParams.get('signature')
-
-    if (!signature) {
-      console.error('No signature in APISign response:', apiSignText)
-      throw new Error('Failed to get signature from HYP Pay APISign')
-    }
-
-    console.log('Got signature:', signature.substring(0, 20) + '...')
-
-    // שלב 2: בנה את ה-payment URL עם action=pay
-    const paymentUrlParams = {
-      action: 'pay',
-      Masof: MASOF,
-      Order: orderId,
-      Info: `Order ${orderId}`,
-      Amount: paymentParams.Amount,
       UTF8: 'True',
       UTF8out: 'True',
       ClientName: clientName,
@@ -118,13 +61,82 @@ serve(async (req) => {
       J5: 'False',
       Sign: 'True',
       MoreData: 'True',
+      sendemail: 'True',
+      SendHesh: 'False',
+    }
+
+    console.log('Sending APISign request to HYP...')
+
+    // בנה את ה-URL של APISign
+    const apiSignUrl = new URL('https://pay.hyp.co.il/p/')
+    Object.entries(apiSignParams).forEach(([key, value]) => {
+      apiSignUrl.searchParams.append(key, value)
+    })
+
+    // שלח את ה-APISign request
+    const apiSignResponse = await fetch(apiSignUrl.toString(), {
+      method: 'GET',
+    })
+
+    if (!apiSignResponse.ok) {
+      throw new Error(`HYP APISign failed: ${apiSignResponse.status}`)
+    }
+
+    const apiSignText = await apiSignResponse.text()
+    console.log('APISign response received')
+
+    // ==========================================
+    // STEP 2: פרסר את ה-Response
+    // ==========================================
+    
+    // התשובה בפורמט query string
+    const apiSignParams2 = new URLSearchParams(apiSignText)
+    
+    // קבל את ה-signature מהתשובה
+    const signature = apiSignParams2.get('signature')
+    
+    if (!signature) {
+      console.error('No signature in response:', apiSignText.substring(0, 200))
+      throw new Error('Failed to get signature from HYP APISign')
+    }
+
+    console.log('Got signature from HYP')
+
+    // ==========================================
+    // STEP 3: בנה את Payment URL עם action=pay
+    // ==========================================
+    
+    // בנה את הפרמטרים של ה-Payment URL
+    // השתמש בפרמטרים שקיבלנו מ-APISign + signature
+    const paymentParams = {
+      action: 'pay',
+      Masof: MASOF,
+      Order: orderId,
+      Info: `Order ${orderId}`,
+      Amount: String(Math.round(amount * 100)),
+      UTF8: 'True',
+      UTF8out: 'True',
+      ClientName: clientName,
+      ClientLName: clientLName,
+      email: customerEmail,
+      cell: customerPhone,
+      Coin: '1',
+      PageLang: 'HEB',
+      Tash: '1',
+      FixTash: 'False',
+      Postpone: 'False',
+      J5: 'False',
+      Sign: 'True',
+      MoreData: 'True',
+      sendemail: 'True',
+      SendHesh: 'False',
       signature: signature, // הוסף את ה-signature שקיבלנו
     }
 
-    const params = new URLSearchParams(paymentUrlParams)
+    const params = new URLSearchParams(paymentParams)
     const paymentUrl = `https://pay.hyp.co.il/p/?${params.toString()}`
 
-    console.log('Payment URL created successfully for order:', orderId)
+    console.log('Payment URL created successfully')
 
     return new Response(
       JSON.stringify({
@@ -136,14 +148,13 @@ serve(async (req) => {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
-          'Access-Control-Expose-Headers': 'Content-Type',
           'Content-Type': 'application/json',
         },
         status: 200,
       }
     )
   } catch (error) {
-    console.error('Payment function error:', error.message, error.stack)
+    console.error('Payment error:', error.message)
 
     return new Response(
       JSON.stringify({
@@ -155,7 +166,6 @@ serve(async (req) => {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
-          'Access-Control-Expose-Headers': 'Content-Type',
           'Content-Type': 'application/json',
         },
         status: 400,
