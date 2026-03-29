@@ -1,28 +1,30 @@
-// api/create-payment.js
-import https from 'https'
+import https from 'https';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { amount, orderId, successUrl, errorUrl, cancelUrl } = req.body
+  const { amount, orderId, successUrl, errorUrl, cancelUrl } = req.body;
 
+  // בדיקה שכל השדות הגיעו מהפרונט-אנד
   if (!amount || !orderId) {
-    return res.status(400).json({ error: 'Missing required fields' })
+    return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  const TERMINAL = process.env.HYP_TERMINAL
-  const USERNAME = process.env.HYP_USERNAME
-  const PASSWORD = process.env.HYP_PASSWORD
+  const TERMINAL = process.env.HYP_TERMINAL;
+  const USERNAME = process.env.HYP_USERNAME;
+  const PASSWORD = process.env.HYP_PASSWORD;
 
   if (!TERMINAL || !USERNAME || !PASSWORD) {
-    console.error('Missing HYP environment variables')
-    return res.status(500).json({ success: false, error: 'Missing payment configuration' })
+    console.error('Missing HYP environment variables');
+    return res.status(500).json({ success: false, error: 'Missing payment configuration in Vercel settings' });
   }
 
-  const totalInAgorot = Math.round(parseFloat(amount) * 100)
+  // המרת סכום לאגורות (Hyp דורשים מספר שלם)
+  const totalInAgorot = Math.round(parseFloat(amount) * 100);
 
+  // בניית ה-XML לפי הפרוטוקול של YaadPay/Hyp
   const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
 <ashrait>
   <request>
@@ -45,58 +47,68 @@ export default async function handler(req, res) {
       <cancelUrl>${cancelUrl}</cancelUrl>
     </doDeal>
   </request>
-</ashrait>`
+</ashrait>`;
 
-  const bodyData = new URLSearchParams({ int_in: xmlPayload }).toString()
-  const credentials = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64')
+  const bodyData = new URLSearchParams({ int_in: xmlPayload }).toString();
+  const credentials = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
 
   try {
     const responseText = await new Promise((resolve, reject) => {
       const options = {
-        hostname: 'cg.pay-it.co.il', // כתובת חלופית של Hyp
+        // הכתובת הרשמית של שרת ה-API של YaadPay/Hyp
+        hostname: 'icom.yaad.net', 
         port: 443,
-        path: '/xpo/Relay',
+        path: '/p/', // הנתיב המדויק לשליחת XML
         method: 'POST',
-       headers: {
-         'Content-Type': 'application/x-www-form-urlencoded',
-         'Authorization': `Basic ${credentials}`,
-         'Content-Length': Buffer.byteLength(bodyData)
-  }
-}
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${credentials}`,
+          'Content-Length': Buffer.byteLength(bodyData),
+          // קריטי: הגדרת הדומיין שלך כדי למנוע שגיאת REFERER
+          'Referer': 'https://nerlya.com'
+        }
+      };
+
       const request = https.request(options, (response) => {
-        let data = ''
-        response.on('data', chunk => data += chunk)
-        response.on('end', () => resolve(data))
-      })
+        let data = '';
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => resolve(data));
+      });
 
-      request.on('error', reject)
-      request.write(bodyData)
-      request.end()
-    })
+      request.on('error', (err) => {
+        console.error('Request Error:', err);
+        reject(err);
+      });
+      
+      request.write(bodyData);
+      request.end();
+    });
 
-    console.log('HYP Response:', responseText)
+    console.log('HYP Response Raw:', responseText);
 
-    const urlMatch = responseText.match(/<mpiHostedPageUrl>([\s\S]*?)<\/mpiHostedPageUrl>/)
-    const statusMatch = responseText.match(/<status>(.*?)<\/status>/)
-    const messageMatch = responseText.match(/<statusText>(.*?)<\/statusText>/)
+    // חילוץ ה-URL של דף הסליקה והסטטוס מהתשובה של Hyp
+    const urlMatch = responseText.match(/<mpiHostedPageUrl>([\s\S]*?)<\/mpiHostedPageUrl>/);
+    const statusMatch = responseText.match(/<status>(.*?)<\/status>/);
+    
+    const status = statusMatch ? statusMatch[1].trim() : 'unknown';
 
-    const status = statusMatch ? statusMatch[1].trim() : 'unknown'
-    const message = messageMatch ? messageMatch[1].trim() : 'Unknown error'
-
-    if (urlMatch && status === '000') {
-      const paymentUrl = urlMatch[1].trim()
-      return res.status(200).json({ success: true, paymentUrl, orderId })
+    if (urlMatch && (status === '000' || status === '0')) {
+      const paymentUrl = urlMatch[1].trim();
+      return res.status(200).json({ success: true, paymentUrl, orderId });
     } else {
-      console.error('HYP error:', status, message)
-      return res.status(400).json({ success: false, error: message, status, rawResponse: responseText })
+      console.error('HYP returned error status:', status);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'חלה שגיאה בתקשורת מול חברת הסליקה', 
+        rawResponse: responseText 
+      });
     }
 
   } catch (error) {
-    console.error('Payment API error FULL:', error)
-    console.error(error.stack)
+    console.error('Payment API Exception:', error);
     return res.status(500).json({
       success: false,
-      error: error.message
-    })
+      error: 'Internal Server Error: ' + error.message
+    });
   }
 }
