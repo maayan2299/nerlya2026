@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -21,13 +21,13 @@ serve(async (req) => {
       customerPhone,
     } = body
 
-    // קרא את כל ה-credentials מ-Secrets
-    const MASOF = Deno.env.get('HYP_MASOF')
-    const KEY = Deno.env.get('HYP_KEY')
-    const PASSP = Deno.env.get('HYP_PASSP')
+    // ערכים אמיתיים של ה-Terminal
+    const MASOF = '4502249638'
+    const KEY = 'd566dce13cebefa2c17e16faf2d602be94b4e50d'
+    const PASSP = Deno.env.get('HYP_PASSP') // PassP מSecrets
 
     if (!MASOF || !KEY || !PASSP) {
-      throw new Error('Missing HYP credentials')
+      throw new Error('Missing payment configuration')
     }
 
     const nameParts = customerName.trim().split(' ')
@@ -35,7 +35,7 @@ serve(async (req) => {
     const clientLName = nameParts.slice(1).join(' ') || ''
 
     // ==========================================
-    // STEP 1: APISign Request (לפי המדריך)
+    // STEP 1: APISign Request
     // ==========================================
     
     const apiSignParams = {
@@ -46,7 +46,7 @@ serve(async (req) => {
       Masof: MASOF,
       Order: orderId,
       Info: `Order ${orderId}`,
-      Amount: String(Math.round(amount * 100)), // סכום בסנטים
+      Amount: String(Math.round(amount * 100)),
       UTF8: 'True',
       UTF8out: 'True',
       ClientName: clientName,
@@ -86,13 +86,10 @@ serve(async (req) => {
     console.log('APISign response received')
 
     // ==========================================
-    // STEP 2: פרסר את ה-Response
+    // STEP 2: פרסור את ה-Response
     // ==========================================
     
-    // התשובה בפורמט query string
     const apiSignParams2 = new URLSearchParams(apiSignText)
-    
-    // קבל את ה-signature מהתשובה
     const signature = apiSignParams2.get('signature')
     
     if (!signature) {
@@ -106,8 +103,6 @@ serve(async (req) => {
     // STEP 3: בנה את Payment URL עם action=pay
     // ==========================================
     
-    // בנה את הפרמטרים של ה-Payment URL
-    // השתמש בפרמטרים שקיבלנו מ-APISign + signature
     const paymentParams = {
       action: 'pay',
       Masof: MASOF,
@@ -130,7 +125,7 @@ serve(async (req) => {
       MoreData: 'True',
       sendemail: 'True',
       SendHesh: 'False',
-      signature: signature, // הוסף את ה-signature שקיבלנו
+      signature: signature,
     }
 
     const params = new URLSearchParams(paymentParams)
@@ -147,7 +142,7 @@ serve(async (req) => {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
           'Content-Type': 'application/json',
         },
         status: 200,
@@ -165,7 +160,7 @@ serve(async (req) => {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
           'Content-Type': 'application/json',
         },
         status: 400,
