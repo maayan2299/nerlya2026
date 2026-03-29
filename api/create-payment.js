@@ -7,24 +7,12 @@ export default async function handler(req, res) {
 
   const { amount, orderId, successUrl, errorUrl, cancelUrl } = req.body;
 
-  // בדיקה שכל השדות הגיעו מהפרונט-אנד
-  if (!amount || !orderId) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
   const TERMINAL = process.env.HYP_TERMINAL;
   const USERNAME = process.env.HYP_USERNAME;
-  const PASSWORD = process.env.HYP_PASSWORD;
+  const PASSWORD = process.env.HYP_PASSWORD; // כאן צריך להיות ה-PassP (02G38L8Y5E)
 
-  if (!TERMINAL || !USERNAME || !PASSWORD) {
-    console.error('Missing HYP environment variables');
-    return res.status(500).json({ success: false, error: 'Missing payment configuration in Vercel settings' });
-  }
-
-  // המרת סכום לאגורות (Hyp דורשים מספר שלם)
   const totalInAgorot = Math.round(parseFloat(amount) * 100);
 
-  // בניית ה-XML לפי הפרוטוקול של YaadPay/Hyp
   const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
 <ashrait>
   <request>
@@ -55,60 +43,43 @@ export default async function handler(req, res) {
   try {
     const responseText = await new Promise((resolve, reject) => {
       const options = {
-        // הכתובת הרשמית של שרת ה-API של YaadPay/Hyp
-        hostname: 'icom.yaad.net', 
+        hostname: 'icom.yaad.net',
         port: 443,
-        path: '/p/', // הנתיב המדויק לשליחת XML
+        path: '/p/',
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Authorization': `Basic ${credentials}`,
           'Content-Length': Buffer.byteLength(bodyData),
-          // קריטי: הגדרת הדומיין שלך כדי למנוע שגיאת REFERER
-          'Referer': 'https://nerlya.com'
+          // שינוי קריטי: שליחת ה-Referer בדיוק כפי שהם מצפים לו
+          'Referer': 'https://nerlya.com/', 
+          'Origin': 'https://nerlya.com',
+          'User-Agent': 'Mozilla/5.0 (Vercel Serverless)' 
         }
       };
 
       const request = https.request(options, (response) => {
         let data = '';
-        response.on('data', chunk => data += chunk);
+        response.on('data', (chunk) => { data += chunk; });
         response.on('end', () => resolve(data));
       });
 
-      request.on('error', (err) => {
-        console.error('Request Error:', err);
-        reject(err);
-      });
-      
+      request.on('error', reject);
       request.write(bodyData);
       request.end();
     });
 
-    console.log('HYP Response Raw:', responseText);
-
-    // חילוץ ה-URL של דף הסליקה והסטטוס מהתשובה של Hyp
-    const urlMatch = responseText.match(/<mpiHostedPageUrl>([\s\S]*?)<\/mpiHostedPageUrl>/);
-    const statusMatch = responseText.match(/<status>(.*?)<\/status>/);
-    
-    const status = statusMatch ? statusMatch[1].trim() : 'unknown';
-
-    if (urlMatch && (status === '000' || status === '0')) {
-      const paymentUrl = urlMatch[1].trim();
-      return res.status(200).json({ success: true, paymentUrl, orderId });
+    // בדיקה מה חזר מהשרת של Hyp
+    if (responseText.includes('<mpiHostedPageUrl>')) {
+      const urlMatch = responseText.match(/<mpiHostedPageUrl>([\s\S]*?)<\/mpiHostedPageUrl>/);
+      return res.status(200).json({ success: true, paymentUrl: urlMatch[1].trim() });
     } else {
-      console.error('HYP returned error status:', status);
-      return res.status(400).json({ 
-        success: false, 
-        error: 'חלה שגיאה בתקשורת מול חברת הסליקה', 
-        rawResponse: responseText 
-      });
+      // אם זה נכשל, נשלח את התשובה המלאה כדי שנוכל לקרוא אותה בלוגים
+      console.error('Hyp Error Response:', responseText);
+      return res.status(400).json({ success: false, raw: responseText });
     }
 
   } catch (error) {
-    console.error('Payment API Exception:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Internal Server Error: ' + error.message
-    });
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
