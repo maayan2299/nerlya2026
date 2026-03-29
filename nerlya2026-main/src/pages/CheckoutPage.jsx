@@ -112,7 +112,8 @@ export default function CheckoutPage() {
       // --- תחילת מנגנון התשלום הישיר ---
       const form = document.createElement('form');
       form.method = 'POST';
-      form.action = 'https://pay.yaad.net/p/';
+      form.action = 'https://icom.yaad.net/p/';
+      
 
       const fields = {
         action: 'pay',
