@@ -16,20 +16,18 @@ import NerLiyaDashboard from './components/NerLiyaDashboard'
 function App() {
   
   useEffect(() => {
-    // בודק אם הלקוח הגיע לכאן אחרי שלחץ על "תשלום" ב-Checkout
     const triggerPayment = sessionStorage.getItem('trigger_payment')
-    const paymentData = sessionStorage.getItem('payment_data')
+    const paymentData = sessionStorage.getItem('payment_params')
 
     if (triggerPayment === 'true' && paymentData) {
-      // מנקים מיד את הזיכרון כדי שלא יקרה שוב בריענון
       sessionStorage.removeItem('trigger_payment')
-      sessionStorage.removeItem('payment_data')
+      sessionStorage.removeItem('payment_params')
 
       const params = JSON.parse(paymentData)
       const targetUrl = 'https://icom.yaad.net/p/'
       const queryString = new URLSearchParams(params).toString()
       
-      // המעבר קורה מכאן (דף הבית) - ה-Referer יהיה https://nerlya.com/
+      // המעבר קורה מדף הבית - Referer יהיה https://nerlya.com/
       window.location.href = `${targetUrl}?${queryString}`
     }
   }, [])
