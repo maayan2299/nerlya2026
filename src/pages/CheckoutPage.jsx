@@ -50,7 +50,7 @@ export default function CheckoutPage() {
     if (!formData.email.trim()) {
       newErrors.email = 'אימייל הוא שדה חובה'
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'כתובת אימייל לא תקינה'
+      newErrors.email = 'כתובת אימייל לא תנה'
     }
     if (formData.shippingMethod !== 'pickup') {
       if (!formData.street.trim()) newErrors.street = 'רחוב הוא שדה חובה'
@@ -89,7 +89,6 @@ export default function CheckoutPage() {
     try {
       const orderId = `NL-${Date.now()}`
       
-      // שמירת נתוני ההזמנה ל-SessionStorage לשימוש בדף התודה
       const orderData = {
         orderId,
         items: cart,
@@ -109,36 +108,26 @@ export default function CheckoutPage() {
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
-      // --- תחילת מנגנון התשלום הישיר ---
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = 'https://icom.yaad.net/p/';
-
-      const fields = {
+      // --- התיקון הסופי לשבירת הלופ ---
+      // אנחנו משתמשים ב-URLSearchParams ומעבירים את הלקוח ישירות ב-GET
+      // זה הדרך הכי טובה לוודא שה-Referer יהיה נקי (nerlya.com)
+      
+      const baseUrl = 'https://icom.yaad.net/p/';
+      const params = new URLSearchParams({
         action: 'pay',
         Masof: '4502249638',
         PassP: '02G38L8Y5E',
-        Amount: finalTotal,
+        Amount: finalTotal.toString(),
         Order: orderId,
         UTF8: 'True',
-        Info: `הזמנה מאתר נרליה - ${formData.fullName}`,
+        Info: `הזמנה מנרליה - ${formData.fullName}`,
         Email: formData.email,
-        // דפי חזרה (ודאי שהכתובות האלו מוגדרות ב-Routes שלך)
         Success: 'https://nerlya.com/success',
         Error: 'https://nerlya.com/error'
-      };
-
-      Object.keys(fields).forEach(key => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = fields[key];
-        form.appendChild(input);
       });
 
-      document.body.appendChild(form);
-      form.submit();
-      // --- סיום מנגנון התשלום ---
+      // מעבר ישיר לכתובת הסליקה
+      window.location.href = `${baseUrl}?${params.toString()}`;
 
     } catch (error) {
       console.error('❌ שגיאת תשלום:', error)
@@ -185,7 +174,6 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <form onSubmit={handleCheckout} className="space-y-8">
-              {/* פרטי לקוח */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">פרטי לקוח</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,7 +216,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* אופציית משלוח */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">אופציית משלוח</h2>
                 <div className="space-y-3">
@@ -258,7 +245,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* כתובת משלוח */}
               {formData.shippingMethod !== 'pickup' && (
                 <div className="bg-white border border-gray-200 p-6 rounded">
                   <h2 className="text-2xl font-bold mb-6">כתובת למשלוח</h2>
@@ -303,7 +289,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* ברכה */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">ברכה אישית</h2>
                 <textarea 
@@ -316,7 +301,6 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              {/* הערות */}
               <div className="bg-white border border-gray-200 p-6 rounded">
                 <h2 className="text-2xl font-bold mb-6">הערות להזמנה</h2>
                 <textarea 
@@ -329,7 +313,6 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              {/* כפתורים */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <button 
                   type="submit" 
@@ -337,13 +320,7 @@ export default function CheckoutPage() {
                   className="flex-1 bg-black text-white py-4 px-8 text-lg font-bold rounded hover:bg-[#CFAA52] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      מעביר לתשלום...
-                    </>
+                    'מעביר לתשלום...'
                   ) : (
                     '🔒 מעבר לתשלום מאובטח'
                   )}
@@ -359,7 +336,6 @@ export default function CheckoutPage() {
             </form>
           </div>
 
-          {/* סיכום הזמנה */}
           <div className="lg:col-span-1">
             <div className="bg-gray-50 border border-gray-200 p-6 rounded sticky top-4">
               <h2 className="text-xl font-bold mb-6">סיכום הזמנה</h2>
@@ -372,9 +348,6 @@ export default function CheckoutPage() {
                       <div className="flex-1">
                         <div className="font-medium">{item.name}</div>
                         <div className="text-gray-600">כמות: {item.quantity}</div>
-                        {item.engravingText && (
-                          <div className="text-xs text-amber-700">✨ חריטה: {item.engravingText}</div>
-                        )}
                       </div>
                       <div className="font-medium">₪{((basePrice + engravingPrice) * item.quantity).toLocaleString('he-IL')}</div>
                     </div>
@@ -397,16 +370,6 @@ export default function CheckoutPage() {
                   <span>סה"כ לתשלום:</span>
                   <span>₪{finalTotal.toLocaleString('he-IL')}</span>
                 </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-300 text-center text-xs text-gray-500">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                  </svg>
-                  תשלום מאובטח 100%
-                </div>
-                המידע שלך מוצפן ומאובטח
               </div>
             </div>
           </div>
