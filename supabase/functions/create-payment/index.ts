@@ -21,10 +21,10 @@ serve(async (req) => {
       customerPhone,
     } = body
 
-    // ערכים אמיתיים של ה-Terminal
+    // Terminal Details
     const MASOF = '4502249638'
     const KEY = 'd566dce13cebefa2c17e16faf2d602be94b4e50d'
-    const PASSP = Deno.env.get('HYP_PASSP') // PassP מSecrets
+    const PASSP = '02G38L8Y5E'
 
     if (!MASOF || !KEY || !PASSP) {
       throw new Error('Missing payment configuration')
@@ -35,7 +35,7 @@ serve(async (req) => {
     const clientLName = nameParts.slice(1).join(' ') || ''
 
     // ==========================================
-    // STEP 1: APISign Request
+    // STEP 1 - APISign (Payment Page Request)
     // ==========================================
     
     const apiSignParams = {
@@ -49,31 +49,40 @@ serve(async (req) => {
       Amount: String(Math.round(amount * 100)),
       UTF8: 'True',
       UTF8out: 'True',
+      UserId: '203269535',
       ClientName: clientName,
       ClientLName: clientLName,
-      email: customerEmail,
+      street: 'levanon 3',
+      city: 'netanya',
+      zip: '42361',
+      phone: '098610338',
       cell: customerPhone,
-      Coin: '1',
-      PageLang: 'HEB',
+      email: customerEmail,
       Tash: '1',
       FixTash: 'False',
+      ShowEngTashText: 'False',
+      Coin: '1',
       Postpone: 'False',
       J5: 'False',
       Sign: 'True',
       MoreData: 'True',
       sendemail: 'True',
       SendHesh: 'False',
+      PageLang: 'HEB',
+      tmp: '1'
     }
 
-    console.log('Sending APISign request to HYP...')
+    console.log('Step 1: Building APISign URL...')
 
-    // בנה את ה-URL של APISign
+    // Build APISign URL
     const apiSignUrl = new URL('https://pay.hyp.co.il/p/')
     Object.entries(apiSignParams).forEach(([key, value]) => {
       apiSignUrl.searchParams.append(key, value)
     })
 
-    // שלח את ה-APISign request
+    console.log('Step 1: Sending APISign request to HYP Pay...')
+
+    // Send APISign request
     const apiSignResponse = await fetch(apiSignUrl.toString(), {
       method: 'GET',
     })
@@ -83,10 +92,10 @@ serve(async (req) => {
     }
 
     const apiSignText = await apiSignResponse.text()
-    console.log('APISign response received')
+    console.log('Step 1: Got APISign response')
 
     // ==========================================
-    // STEP 2: פרסור את ה-Response
+    // Parse APISign Response
     // ==========================================
     
     const apiSignParams2 = new URLSearchParams(apiSignText)
@@ -97,12 +106,14 @@ serve(async (req) => {
       throw new Error('Failed to get signature from HYP APISign')
     }
 
-    console.log('Got signature from HYP')
+    console.log('Step 1: Successfully got signature from HYP Pay')
 
     // ==========================================
-    // STEP 3: בנה את Payment URL עם action=pay
+    // STEP 2 - Generating the Payment Page Link
     // ==========================================
     
+    console.log('Step 2: Building payment page link...')
+
     const paymentParams = {
       action: 'pay',
       Masof: MASOF,
@@ -111,27 +122,34 @@ serve(async (req) => {
       Amount: String(Math.round(amount * 100)),
       UTF8: 'True',
       UTF8out: 'True',
+      UserId: '203269535',
       ClientName: clientName,
       ClientLName: clientLName,
-      email: customerEmail,
+      street: 'levanon 3',
+      city: 'netanya',
+      zip: '42361',
+      phone: '098610338',
       cell: customerPhone,
-      Coin: '1',
-      PageLang: 'HEB',
+      email: customerEmail,
       Tash: '1',
       FixTash: 'False',
+      ShowEngTashText: 'False',
+      Coin: '1',
       Postpone: 'False',
       J5: 'False',
       Sign: 'True',
       MoreData: 'True',
       sendemail: 'True',
       SendHesh: 'False',
+      PageLang: 'HEB',
+      tmp: '1',
       signature: signature,
     }
 
     const params = new URLSearchParams(paymentParams)
     const paymentUrl = `https://pay.hyp.co.il/p/?${params.toString()}`
 
-    console.log('Payment URL created successfully')
+    console.log('Step 2: Payment URL created successfully')
 
     return new Response(
       JSON.stringify({
