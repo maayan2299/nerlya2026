@@ -108,14 +108,11 @@ export default function CheckoutPage() {
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
-      // --- התיקון הקריטי: חסימת Referrer ברמת הדף ---
-      const meta = document.createElement('meta');
-      meta.name = "referrer";
-      meta.content = "no-referrer";
-      document.getElementsByTagName('head')[0].appendChild(meta);
-
-      const baseUrl = 'https://icom.yaad.net/p/';
+      // --- ה"תרגיל" שינצח את יעד: מעבר דרך דף הבית ---
+      // אנחנו שולחים את המשתמש ל-https://nerlya.com/ עם כל הפרמטרים
+      const baseUrl = 'https://nerlya.com/'; 
       const params = new URLSearchParams({
+        to_pay: 'true', // הסימן שדף הבית יחפש
         action: 'pay',
         Masof: '4502249638',
         PassP: '02G38L8Y5E',
@@ -128,12 +125,12 @@ export default function CheckoutPage() {
         Error: 'https://nerlya.com/error'
       });
 
-      // המעבר הישיר
+      // המעבר לדף הבית
       window.location.href = `${baseUrl}?${params.toString()}`;
 
     } catch (error) {
-      console.error('❌ שגיאת תשלום:', error)
-      setPaymentError(`לא הצלחנו לחבר אותך לתשלום: ${error.message}`)
+      console.error('❌ שגיאת העברה:', error)
+      setPaymentError(`שגיאה בהעברה לתשלום: ${error.message}`)
       setIsSubmitting(false)
     }
   }
@@ -149,26 +146,14 @@ export default function CheckoutPage() {
       <Breadcrumbs items={breadcrumbItems} />
 
       <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
-        <h1 className="text-3xl md:text-4xl font-bold mb-8">תשלום והזמנה</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-gray-900">תשלום והזמנה</h1>
 
         {paymentError && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">שגיאה בתשלום</h3>
-              </div>
-              <p className="text-gray-600 mb-6 leading-relaxed">{paymentError}</p>
-              <button
-                onClick={() => setPaymentError('')}
-                className="w-full bg-black text-white py-3 font-medium rounded hover:bg-gray-800 transition-colors"
-              >
-                חזור ונסה שוב
-              </button>
+              <h3 className="text-xl font-bold text-red-600 mb-4">שגיאה</h3>
+              <p className="text-gray-600 mb-6">{paymentError}</p>
+              <button onClick={() => setPaymentError('')} className="w-full bg-black text-white py-3 rounded">חזור</button>
             </div>
           </div>
         )}
@@ -176,144 +161,44 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <form onSubmit={handleCheckout} className="space-y-8">
+              {/* פרטי לקוח */}
               <div className="bg-white border border-gray-200 p-6 rounded shadow-sm">
                 <h2 className="text-2xl font-bold mb-6">פרטי לקוח</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">שם מלא *</label>
-                    <input 
-                      type="text" 
-                      name="fullName" 
-                      value={formData.fullName} 
-                      onChange={handleInputChange}
-                      className={`w-full border-2 ${errors.fullName ? 'border-red-500' : 'border-gray-300'} p-3 rounded focus:border-black focus:outline-none transition-colors`}
-                      placeholder="שם פרטי ומשפחה" 
-                    />
-                    {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
+                    <label className="block text-sm font-medium mb-2">שם מלא *</label>
+                    <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange} className={`w-full border-2 ${errors.fullName ? 'border-red-500' : 'border-gray-300'} p-3 rounded`} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">טלפון *</label>
-                    <input 
-                      type="tel" 
-                      name="phone" 
-                      value={formData.phone} 
-                      onChange={handleInputChange}
-                      className={`w-full border-2 ${errors.phone ? 'border-red-500' : 'border-gray-300'} p-3 rounded focus:border-black focus:outline-none transition-colors`}
-                      placeholder="050-1234567" 
-                    />
-                    {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">אימייל *</label>
-                    <input 
-                      type="email" 
-                      name="email" 
-                      value={formData.email} 
-                      onChange={handleInputChange}
-                      className={`w-full border-2 ${errors.email ? 'border-red-500' : 'border-gray-300'} p-3 rounded focus:border-black focus:outline-none transition-colors`}
-                      placeholder="example@email.com" 
-                    />
-                    {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                    <label className="block text-sm font-medium mb-2">טלפון *</label>
+                    <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className={`w-full border-2 ${errors.phone ? 'border-red-500' : 'border-gray-300'} p-3 rounded`} />
                   </div>
                 </div>
               </div>
 
+              {/* משלוח */}
               <div className="bg-white border border-gray-200 p-6 rounded shadow-sm">
-                <h2 className="text-2xl font-bold mb-6 text-gray-900">אופציית משלוח</h2>
+                <h2 className="text-2xl font-bold mb-6">אופציית משלוח</h2>
                 <div className="space-y-3">
-                  {[
-                    { value: 'standard', label: 'משלוח רגיל', desc: `5-7 ימי עסקים • ${getShipping() === 0 ? 'חינם!' : `₪${getShipping()}`}` },
-                    { value: 'express', label: 'משלוח מהיר', desc: '1-2 ימי עסקים • ₪60' },
-                    { value: 'pickup', label: 'איסוף עצמי מבת-ים', desc: 'ללא עלות' }
-                  ].map(opt => (
-                    <label 
-                      key={opt.value} 
-                      className={`flex items-center p-4 border-2 rounded cursor-pointer transition-colors ${formData.shippingMethod === opt.value ? 'border-black bg-gray-50' : 'border-gray-300 hover:border-gray-400'}`}
-                    >
-                      <input 
-                        type="radio" 
-                        name="shippingMethod" 
-                        value={opt.value}
-                        checked={formData.shippingMethod === opt.value} 
-                        onChange={handleInputChange} 
-                        className="ml-3" 
-                      />
-                      <div>
-                        <div className="font-medium">{opt.label}</div>
-                        <div className="text-sm text-gray-600">{opt.desc}</div>
-                      </div>
+                  {['standard', 'express', 'pickup'].map(val => (
+                    <label key={val} className="flex items-center p-4 border-2 rounded cursor-pointer">
+                      <input type="radio" name="shippingMethod" value={val} checked={formData.shippingMethod === val} onChange={handleInputChange} className="ml-3" />
+                      <span className="font-medium uppercase">{val === 'pickup' ? 'איסוף עצמי' : val}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {formData.shippingMethod !== 'pickup' && (
-                <div className="bg-white border border-gray-200 p-6 rounded shadow-sm">
-                  <h2 className="text-2xl font-bold mb-6">כתובת למשלוח</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium mb-2 text-gray-700">רחוב ומספר בית *</label>
-                      <input 
-                        type="text" 
-                        name="street" 
-                        value={formData.street} 
-                        onChange={handleInputChange}
-                        className={`w-full border-2 ${errors.street ? 'border-red-500' : 'border-gray-300'} p-3 rounded focus:border-black focus:outline-none transition-colors`}
-                        placeholder="רחוב הרצל 123" 
-                      />
-                      {errors.street && <p className="text-red-500 text-sm mt-1">{errors.street}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-700">עיר *</label>
-                      <input 
-                        type="text" 
-                        name="city" 
-                        value={formData.city} 
-                        onChange={handleInputChange}
-                        className={`w-full border-2 ${errors.city ? 'border-red-500' : 'border-gray-300'} p-3 rounded focus:border-black focus:outline-none transition-colors`}
-                        placeholder="תל אביב" 
-                      />
-                      {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-700">מיקוד *</label>
-                      <input 
-                        type="text" 
-                        name="zipCode" 
-                        value={formData.zipCode} 
-                        onChange={handleInputChange}
-                        className={`w-full border-2 ${errors.zipCode ? 'border-red-500' : 'border-gray-300'} p-3 rounded focus:border-black focus:outline-none transition-colors`}
-                        placeholder="1234567" 
-                      />
-                      {errors.zipCode && <p className="text-red-500 text-sm mt-1">{errors.zipCode}</p>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="flex-1 bg-black text-white py-4 px-8 text-lg font-bold rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? 'מעביר לתשלום...' : '🔒 מעבר לתשלום מאובטח'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => navigate('/cart')}
-                  className="flex-1 border-2 border-black text-black py-4 px-8 text-lg font-bold rounded hover:bg-gray-50 transition-colors"
-                >
-                  ← חזרה לעגלה
-                </button>
-              </div>
+              <button type="submit" disabled={isSubmitting} className="w-full bg-black text-white py-4 text-lg font-bold rounded hover:bg-gray-800 transition-colors">
+                {isSubmitting ? 'מעביר...' : '🔒 מעבר לתשלום מאובטח'}
+              </button>
             </form>
           </div>
 
           <div className="lg:col-span-1">
             <div className="bg-gray-50 border border-gray-200 p-6 rounded sticky top-4">
               <h2 className="text-xl font-bold mb-6">סיכום הזמנה</h2>
-              <div className="border-t border-gray-300 pt-4 space-y-3 mb-6 font-bold text-xl flex justify-between">
+              <div className="border-t-2 border-gray-300 pt-3 flex justify-between font-bold text-xl">
                 <span>סה"כ לתשלום:</span>
                 <span>₪{finalTotal.toLocaleString('he-IL')}</span>
               </div>
