@@ -27,7 +27,7 @@ function App() {
       const targetUrl = 'https://icom.yaad.net/p/'
       const queryString = new URLSearchParams(params).toString()
       
-      // המעבר קורה מדף הבית - Referer יהיה https://nerlya.com/
+      // המעבר קורה מכאן (נרליה.קום) - ה-Referer יהיה נקי ותקין
       window.location.href = `${targetUrl}?${queryString}`
     }
   }, [])
