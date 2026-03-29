@@ -32,19 +32,78 @@ serve(async (req) => {
         KEY: !!KEY,
         PASSP: !!PASSP,
       })
-      throw new Error('Missing payment configuration - check HYP_MASOF, HYP_KEY, HYP_PASSP in Secrets')
+      throw new Error('Missing payment configuration')
     }
 
     const nameParts = customerName.trim().split(' ')
     const clientName = nameParts[0] || customerName
     const clientLName = nameParts.slice(1).join(' ') || ''
 
+    // בנה את הפרמטרים לפי HYP Pay API docs - Pay Protocol
     const paymentParams = {
+      action: 'APISign',
+      What: 'SIGN',
+      Masof: MASOF,
+      KEY: KEY,
+      PassP: PASSP,
+      Order: orderId,
+      Info: `Order ${orderId}`,
+      Amount: String(Math.round(amount * 100)), // סכום בסנטים
+      UTF8: 'True',
+      UTF8out: 'True',
+      ClientName: clientName,
+      ClientLName: clientLName,
+      email: customerEmail,
+      cell: customerPhone,
+      Coin: '1', // 1 = שקל
+      PageLang: 'HEB',
+      Tash: '1',
+      FixTash: 'False',
+      Postpone: 'False',
+      J5: 'False',
+      Sign: 'True',
+      MoreData: 'True',
+    }
+
+    console.log('Calling HYP APISign with params:', {
+      Masof: MASOF,
+      Order: orderId,
+      Amount: paymentParams.Amount,
+    })
+
+    // שלב 1: קרא ל-APISign לקבלת signature
+    const apiSignUrl = new URL('https://pay.hyp.co.il/p/')
+    Object.entries(paymentParams).forEach(([key, value]) => {
+      apiSignUrl.searchParams.append(key, value)
+    })
+
+    console.log('APISign URL (first 100 chars):', apiSignUrl.toString().substring(0, 100))
+
+    const apiSignResponse = await fetch(apiSignUrl.toString(), {
+      method: 'GET',
+    })
+
+    const apiSignText = await apiSignResponse.text()
+    console.log('APISign response:', apiSignText.substring(0, 200))
+
+    // פרסר את התשובה (היא בפורמט query string)
+    const apiSignParams = new URLSearchParams(apiSignText)
+    const signature = apiSignParams.get('signature')
+
+    if (!signature) {
+      console.error('No signature in APISign response:', apiSignText)
+      throw new Error('Failed to get signature from HYP Pay APISign')
+    }
+
+    console.log('Got signature:', signature.substring(0, 20) + '...')
+
+    // שלב 2: בנה את ה-payment URL עם action=pay
+    const paymentUrlParams = {
       action: 'pay',
       Masof: MASOF,
       Order: orderId,
       Info: `Order ${orderId}`,
-      Amount: String(Math.round(amount * 100)),
+      Amount: paymentParams.Amount,
       UTF8: 'True',
       UTF8out: 'True',
       ClientName: clientName,
@@ -53,40 +112,16 @@ serve(async (req) => {
       cell: customerPhone,
       Coin: '1',
       PageLang: 'HEB',
-      SendHesh: 'False',
       Tash: '1',
+      FixTash: 'False',
       Postpone: 'False',
       J5: 'False',
+      Sign: 'True',
+      MoreData: 'True',
+      signature: signature, // הוסף את ה-signature שקיבלנו
     }
 
-    // בנה את string החתימה
-    const signString = Object.keys(paymentParams)
-      .sort()
-      .map(key => `${key}=${paymentParams[key]}`)
-      .join('&') + PASSP
-
-    console.log('Sign string (without KEY):', signString.substring(0, 100) + '...')
-
-    const encoder = new TextEncoder()
-    const data = encoder.encode(signString)
-
-    // חתום על הבקשה עם HMAC-SHA256
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(KEY),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    )
-
-    const signatureBuffer = await crypto.subtle.sign('HMAC', key, data)
-    const signatureArray = Array.from(new Uint8Array(signatureBuffer))
-    const signHex = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-    paymentParams.Sign = signHex
-
-    // בנה את ה-URL של התשלום
-    const params = new URLSearchParams(paymentParams)
+    const params = new URLSearchParams(paymentUrlParams)
     const paymentUrl = `https://pay.hyp.co.il/p/?${params.toString()}`
 
     console.log('Payment URL created successfully for order:', orderId)
@@ -108,7 +143,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Payment function error:', error.message)
+    console.error('Payment function error:', error.message, error.stack)
 
     return new Response(
       JSON.stringify({
