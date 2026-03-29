@@ -21,12 +21,18 @@ serve(async (req) => {
       customerPhone,
     } = body
 
-    const MASOF = '4502249638'
+    // קרא את כל ה-credentials מ-Secrets
+    const MASOF = Deno.env.get('HYP_MASOF')
     const KEY = Deno.env.get('HYP_KEY')
     const PASSP = Deno.env.get('HYP_PASSP')
 
     if (!MASOF || !KEY || !PASSP) {
-      throw new Error('Missing payment configuration')
+      console.error('Missing HYP credentials:', {
+        MASOF: !!MASOF,
+        KEY: !!KEY,
+        PASSP: !!PASSP,
+      })
+      throw new Error('Missing payment configuration - check HYP_MASOF, HYP_KEY, HYP_PASSP in Secrets')
     }
 
     const nameParts = customerName.trim().split(' ')
@@ -53,14 +59,18 @@ serve(async (req) => {
       J5: 'False',
     }
 
+    // בנה את string החתימה
     const signString = Object.keys(paymentParams)
       .sort()
       .map(key => `${key}=${paymentParams[key]}`)
       .join('&') + PASSP
 
+    console.log('Sign string (without KEY):', signString.substring(0, 100) + '...')
+
     const encoder = new TextEncoder()
     const data = encoder.encode(signString)
-    
+
+    // חתום על הבקשה עם HMAC-SHA256
     const key = await crypto.subtle.importKey(
       'raw',
       encoder.encode(KEY),
@@ -75,39 +85,43 @@ serve(async (req) => {
 
     paymentParams.Sign = signHex
 
+    // בנה את ה-URL של התשלום
     const params = new URLSearchParams(paymentParams)
     const paymentUrl = `https://pay.hyp.co.il/p/?${params.toString()}`
 
+    console.log('Payment URL created successfully for order:', orderId)
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         paymentUrl,
-        success: true 
+        success: true,
       }),
       {
-        headers: { 
+        headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
           'Access-Control-Expose-Headers': 'Content-Type',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         status: 200,
       }
     )
-
   } catch (error) {
+    console.error('Payment function error:', error.message)
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error.message || 'Unknown error',
-        success: false
+        success: false,
       }),
       {
-        headers: { 
+        headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, referer',
           'Access-Control-Expose-Headers': 'Content-Type',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         status: 400,
       }
