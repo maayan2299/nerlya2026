@@ -5,40 +5,29 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { amount, orderId, successUrl, errorUrl, cancelUrl } = req.body;
+  const { amount, orderId, successUrl, errorUrl } = req.body;
 
+  // אלו המשתנים שהגדרת ב-Vercel
   const TERMINAL = process.env.HYP_TERMINAL;
   const USERNAME = process.env.HYP_USERNAME;
-  const PASSWORD = process.env.HYP_PASSWORD; // כאן צריך להיות ה-PassP (02G38L8Y5E)
+  const PASSWORD = process.env.HYP_PASSWORD; // ה-PassP (02G38L8Y5E)
 
-  const totalInAgorot = Math.round(parseFloat(amount) * 100);
-
-  const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
-<ashrait>
-  <request>
-    <version>2000</version>
-    <language>HEB</language>
-    <command>doDeal</command>
-    <doDeal>
-      <terminalNumber>${TERMINAL}</terminalNumber>
-      <cardNo>CGMPI</cardNo>
-      <total>${totalInAgorot}</total>
-      <transactionType>Debit</transactionType>
-      <creditType>RegularCredit</creditType>
-      <currency>1</currency>
-      <transactionCode>Internet</transactionCode>
-      <validation>TxnSetup</validation>
-      <uniqueid>${orderId}</uniqueid>
-      <mpiValidation>AutoComm</mpiValidation>
-      <successUrl>${successUrl}</successUrl>
-      <errorUrl>${errorUrl}</errorUrl>
-      <cancelUrl>${cancelUrl}</cancelUrl>
-    </doDeal>
-  </request>
-</ashrait>`;
-
-  const bodyData = new URLSearchParams({ int_in: xmlPayload }).toString();
-  const credentials = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
+  // 1. בניית גוף הבקשה לפי ה-API שהם שלחו (Step 1)
+  const postData = new URLSearchParams({
+    action: 'APISign',
+    what: 'SIGN',
+    Masof: TERMINAL,
+    PassP: PASSWORD,
+    Amount: amount,
+    Order: orderId,
+    UTF8: 'True',
+    // דפי חזרה
+    Success: successUrl || `https://nerlya.com/success`,
+    Error: errorUrl || `https://nerlya.com/error`,
+    // שדות אופציונליים שיכולים לעזור
+    Info: 'Purchase from Nerlya',
+    ClientName: 'Customer',
+  }).toString();
 
   try {
     const responseText = await new Promise((resolve, reject) => {
@@ -49,12 +38,10 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${credentials}`,
-          'Content-Length': Buffer.byteLength(bodyData),
-          // שינוי קריטי: שליחת ה-Referer בדיוק כפי שהם מצפים לו
-          'Referer': 'https://nerlya.com/', 
-          'Origin': 'https://nerlya.com',
-          'User-Agent': 'Mozilla/5.0 (Vercel Serverless)' 
+          'Content-Length': Buffer.byteLength(postData),
+          // כאן אנחנו "מתחפשים" לדפדפן כדי לעקוף את שגיאת ה-Referer שהם מתעקשים עליה
+          'Referer': 'https://nerlya.com/',
+          'Origin': 'https://nerlya.com'
         }
       };
 
@@ -65,18 +52,28 @@ export default async function handler(req, res) {
       });
 
       request.on('error', reject);
-      request.write(bodyData);
+      request.write(postData);
       request.end();
     });
 
-    // בדיקה מה חזר מהשרת של Hyp
-    if (responseText.includes('<mpiHostedPageUrl>')) {
-      const urlMatch = responseText.match(/<mpiHostedPageUrl>([\s\S]*?)<\/mpiHostedPageUrl>/);
-      return res.status(200).json({ success: true, paymentUrl: urlMatch[1].trim() });
+    console.log('HYP Response:', responseText);
+
+    // 2. ניתוח התשובה (הם מחזירים מחרוזת של פרמטרים)
+    const urlParams = new URLSearchParams(responseText);
+    
+    // אם הכל תקין, הם מחזירים URL שמתחיל ב-https
+    if (responseText.startsWith('https')) {
+        return res.status(200).json({ 
+            success: true, 
+            paymentUrl: responseText.trim() // ב-Pay Protocol התשובה היא פשוט ה-URL עצמו
+        });
     } else {
-      // אם זה נכשל, נשלח את התשובה המלאה כדי שנוכל לקרוא אותה בלוגים
-      console.error('Hyp Error Response:', responseText);
-      return res.status(400).json({ success: false, raw: responseText });
+        // אם חזרה שגיאה (כמו שגיאת אימות)
+        return res.status(400).json({ 
+            success: false, 
+            error: 'שגיאת אימות מול חברת הסליקה', 
+            details: responseText 
+        });
     }
 
   } catch (error) {
