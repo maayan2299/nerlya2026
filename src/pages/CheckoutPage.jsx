@@ -50,7 +50,7 @@ export default function CheckoutPage() {
     if (!formData.email.trim()) {
       newErrors.email = 'אימייל הוא שדה חובה'
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'כתובת אימייל לא תנה'
+      newErrors.email = 'כתובת אימייל לא תקינה'
     }
     if (formData.shippingMethod !== 'pickup') {
       if (!formData.street.trim()) newErrors.street = 'רחוב הוא שדה חובה'
@@ -108,10 +108,12 @@ export default function CheckoutPage() {
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
-      // --- התיקון הסופי לשבירת הלופ ---
-      // אנחנו משתמשים ב-URLSearchParams ומעבירים את הלקוח ישירות ב-GET
-      // זה הדרך הכי טובה לוודא שה-Referer יהיה נקי (nerlya.com)
-      
+      // --- התיקון הקריטי: חסימת Referrer ברמת הדף ---
+      const meta = document.createElement('meta');
+      meta.name = "referrer";
+      meta.content = "no-referrer";
+      document.getElementsByTagName('head')[0].appendChild(meta);
+
       const baseUrl = 'https://icom.yaad.net/p/';
       const params = new URLSearchParams({
         action: 'pay',
@@ -126,7 +128,7 @@ export default function CheckoutPage() {
         Error: 'https://nerlya.com/error'
       });
 
-      // מעבר ישיר לכתובת הסליקה
+      // המעבר הישיר
       window.location.href = `${baseUrl}?${params.toString()}`;
 
     } catch (error) {
@@ -174,11 +176,11 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <form onSubmit={handleCheckout} className="space-y-8">
-              <div className="bg-white border border-gray-200 p-6 rounded">
+              <div className="bg-white border border-gray-200 p-6 rounded shadow-sm">
                 <h2 className="text-2xl font-bold mb-6">פרטי לקוח</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">שם מלא *</label>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">שם מלא *</label>
                     <input 
                       type="text" 
                       name="fullName" 
@@ -190,7 +192,7 @@ export default function CheckoutPage() {
                     {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">טלפון *</label>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">טלפון *</label>
                     <input 
                       type="tel" 
                       name="phone" 
@@ -202,7 +204,7 @@ export default function CheckoutPage() {
                     {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-2">אימייל *</label>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">אימייל *</label>
                     <input 
                       type="email" 
                       name="email" 
@@ -216,8 +218,8 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 p-6 rounded">
-                <h2 className="text-2xl font-bold mb-6">אופציית משלוח</h2>
+              <div className="bg-white border border-gray-200 p-6 rounded shadow-sm">
+                <h2 className="text-2xl font-bold mb-6 text-gray-900">אופציית משלוח</h2>
                 <div className="space-y-3">
                   {[
                     { value: 'standard', label: 'משלוח רגיל', desc: `5-7 ימי עסקים • ${getShipping() === 0 ? 'חינם!' : `₪${getShipping()}`}` },
@@ -246,11 +248,11 @@ export default function CheckoutPage() {
               </div>
 
               {formData.shippingMethod !== 'pickup' && (
-                <div className="bg-white border border-gray-200 p-6 rounded">
+                <div className="bg-white border border-gray-200 p-6 rounded shadow-sm">
                   <h2 className="text-2xl font-bold mb-6">כתובת למשלוח</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium mb-2">רחוב ומספר בית *</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">רחוב ומספר בית *</label>
                       <input 
                         type="text" 
                         name="street" 
@@ -262,7 +264,7 @@ export default function CheckoutPage() {
                       {errors.street && <p className="text-red-500 text-sm mt-1">{errors.street}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">עיר *</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">עיר *</label>
                       <input 
                         type="text" 
                         name="city" 
@@ -274,7 +276,7 @@ export default function CheckoutPage() {
                       {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">מיקוד *</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">מיקוד *</label>
                       <input 
                         type="text" 
                         name="zipCode" 
@@ -289,41 +291,13 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              <div className="bg-white border border-gray-200 p-6 rounded">
-                <h2 className="text-2xl font-bold mb-6">ברכה אישית</h2>
-                <textarea 
-                  name="blessing" 
-                  value={formData.blessing} 
-                  onChange={handleInputChange} 
-                  rows="3"
-                  className="w-full border-2 border-gray-300 p-3 rounded focus:border-black focus:outline-none transition-colors"
-                  placeholder="האם תרצה להוסיף ברכה אישית למוצר? (אופציונלי)" 
-                />
-              </div>
-
-              <div className="bg-white border border-gray-200 p-6 rounded">
-                <h2 className="text-2xl font-bold mb-6">הערות להזמנה</h2>
-                <textarea 
-                  name="notes" 
-                  value={formData.notes} 
-                  onChange={handleInputChange} 
-                  rows="4"
-                  className="w-full border-2 border-gray-300 p-3 rounded focus:border-black focus:outline-none transition-colors"
-                  placeholder="הוראות מיוחדות למשלוח, זמן מועדף וכו' (אופציונלי)" 
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="flex-1 bg-black text-white py-4 px-8 text-lg font-bold rounded hover:bg-[#CFAA52] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 bg-black text-white py-4 px-8 text-lg font-bold rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? (
-                    'מעביר לתשלום...'
-                  ) : (
-                    '🔒 מעבר לתשלום מאובטח'
-                  )}
+                  {isSubmitting ? 'מעביר לתשלום...' : '🔒 מעבר לתשלום מאובטח'}
                 </button>
                 <button 
                   type="button" 
@@ -339,37 +313,9 @@ export default function CheckoutPage() {
           <div className="lg:col-span-1">
             <div className="bg-gray-50 border border-gray-200 p-6 rounded sticky top-4">
               <h2 className="text-xl font-bold mb-6">סיכום הזמנה</h2>
-              <div className="mb-6 max-h-64 overflow-y-auto">
-                {cart.map((item) => {
-                  const basePrice = parseFloat(item.sale_price || item.price) || 0
-                  const engravingPrice = parseFloat(item.engravingPrice) || 0
-                  return (
-                    <div key={item.uniqueId || item.id} className="flex justify-between items-center py-2 text-sm border-b border-gray-200 last:border-0">
-                      <div className="flex-1">
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-gray-600">כמות: {item.quantity}</div>
-                      </div>
-                      <div className="font-medium">₪{((basePrice + engravingPrice) * item.quantity).toLocaleString('he-IL')}</div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="border-t border-gray-300 pt-4 space-y-3 mb-6">
-                <div className="flex justify-between text-base">
-                  <span className="text-gray-600">סכום ביניים:</span>
-                  <span className="font-medium">₪{getSubtotal().toLocaleString('he-IL')}</span>
-                </div>
-                <div className="flex justify-between text-base">
-                  <span className="text-gray-600">משלוח:</span>
-                  <span className="font-medium">
-                    {shippingCost === 0 ? <span className="text-green-600">חינם!</span> : `₪${shippingCost}`}
-                  </span>
-                </div>
-                <div className="border-t-2 border-gray-300 pt-3 flex justify-between font-bold text-xl">
-                  <span>סה"כ לתשלום:</span>
-                  <span>₪{finalTotal.toLocaleString('he-IL')}</span>
-                </div>
+              <div className="border-t border-gray-300 pt-4 space-y-3 mb-6 font-bold text-xl flex justify-between">
+                <span>סה"כ לתשלום:</span>
+                <span>₪{finalTotal.toLocaleString('he-IL')}</span>
               </div>
             </div>
           </div>
