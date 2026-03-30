@@ -156,7 +156,7 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <Link to="/checkout"
+              <Link to="/payment"
                 className="block w-full text-center bg-black text-white py-4 font-medium hover:bg-[#CFAA52] transition-colors mb-3">
                 מעבר לתשלום 🔒
               </Link>
