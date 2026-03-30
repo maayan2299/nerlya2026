@@ -75,7 +75,7 @@ serve(async (req) => {
     console.log('Step 1: Building APISign URL...')
 
     // Build APISign URL
-    const apiSignUrl = new URL('https://pay.hyp.co.il/p/')
+    const apiSignUrl = new URL('https://icom.yaad.net/p/')
     Object.entries(apiSignParams).forEach(([key, value]) => {
       apiSignUrl.searchParams.append(key, value)
     })
@@ -147,7 +147,7 @@ serve(async (req) => {
     }
 
     const params = new URLSearchParams(paymentParams)
-    const paymentUrl = `https://pay.hyp.co.il/p/?${params.toString()}`
+    const paymentUrl = `https://icom.yaad.net/p/?${params.toString()}`
 
     console.log('Step 2: Payment URL created successfully')
 
