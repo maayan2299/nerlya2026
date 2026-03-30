@@ -172,8 +172,8 @@ export default function CartDrawer() {
               </div>
             </div>
             
-           <Link
-              to="/cart"
+            <Link
+              to="/payment"
               onClick={() => setIsCartOpen(false)}
               className="block text-center w-full bg-black text-white py-3 sm:py-4 font-medium hover:bg-gray-800 transition-colors mb-3 rounded"
             >
