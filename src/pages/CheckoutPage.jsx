@@ -109,35 +109,40 @@ export default function CheckoutPage() {
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
-      // --- תחילת מנגנון התשלום הישיר ---
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = 'https://icom.yaad.net/p/';
+      // --- תחילת מנגנון התשלום דרך Edge Function ---
+      
+      // Step 1: קרא ל-Edge Function שלנו שעושה APISign ומחזיר signature
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            orderId,
+            amount: finalTotal,
+            customerName: formData.fullName,
+            customerEmail: formData.email,
+            customerPhone: formData.phone
+          })
+        }
+      )
 
-      const fields = {
-        action: 'pay',
-        Masof: '4502249638',
-        PassP: '02G38L8Y5E',
-        Amount: finalTotal,
-        Order: orderId,
-        UTF8: 'True',
-        Info: `הזמנה מאתר נרליה - ${formData.fullName}`,
-        Email: formData.email,
-        // דפי חזרה (ודאי שהכתובות האלו מוגדרות ב-Routes שלך)
-        Success: 'https://nerlya.com/success',
-        Error: 'https://nerlya.com/error'
-      };
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create payment')
+      }
 
-      Object.keys(fields).forEach(key => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = fields[key];
-        form.appendChild(input);
-      });
+      const paymentData = await response.json()
 
-      document.body.appendChild(form);
-      form.submit();
+      // Step 2: אם קיבלנו paymentUrl עם signature - רדיריקט
+      if (paymentData.paymentUrl) {
+        window.location.href = paymentData.paymentUrl
+      } else {
+        throw new Error(paymentData.error || 'Unknown payment error')
+      }
       // --- סיום מנגנון התשלום ---
 
     } catch (error) {
