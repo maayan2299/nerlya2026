@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { CartProvider } from './context/CartContext'
-
 import HomePage from './pages/HomePage'
 import ProductDetail from './pages/ProductDetail'
 import CategoryPage from './pages/CategoryPage'
@@ -18,11 +17,9 @@ function App() {
   useEffect(() => {
     const triggerPayment = sessionStorage.getItem('trigger_payment')
     const paymentData = sessionStorage.getItem('payment_params')
-
     if (triggerPayment === 'true' && paymentData) {
       sessionStorage.removeItem('trigger_payment')
       sessionStorage.removeItem('payment_params')
-
       const params = JSON.parse(paymentData)
       const targetUrl = 'https://icom.yaad.net/p/'
       const queryString = new URLSearchParams(params).toString()
@@ -41,7 +38,7 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/payment" element={<CheckoutPage />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-error" element={<PaymentError />} />
