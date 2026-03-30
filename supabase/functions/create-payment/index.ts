@@ -46,7 +46,7 @@ serve(async (req) => {
       Masof: MASOF,
       Order: orderId,
       Info: `Order ${orderId}`,
-      Amount: String(Math.round(amount * 100)),
+      Amount: String(Math.round(amount)),
       UTF8: 'True',
       UTF8out: 'True',
       UserId: '203269535',
