@@ -82,9 +82,12 @@ serve(async (req) => {
 
     console.log('Step 1: Sending APISign request to HYP Pay...')
 
-    // Send APISign request
+    // Send APISign request WITH Referer header
     const apiSignResponse = await fetch(apiSignUrl.toString(), {
       method: 'GET',
+      headers: {
+        'Referer': 'https://nerlya.com'  // שלח רק את הדומיין, לא את ה-path
+      }
     })
 
     if (!apiSignResponse.ok) {
