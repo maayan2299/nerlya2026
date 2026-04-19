@@ -8,7 +8,6 @@ import { supabase } from '../lib/supabase'
 const ENGRAVING_CONFIG = {
   engraving: {
     label: 'חריטה',
-    icon: '✍️',
     priceLabel: '₪10',
     price: 10,
     fields: ['text', 'color'],
