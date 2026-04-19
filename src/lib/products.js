@@ -23,7 +23,7 @@ export async function getProducts() {
       categories (name),
       product_images (image_url, is_primary)
     `)
-    .eq('is_active', true)  // 👈 רק מוצרים פעילים!
+    .eq('is_active', true)
     .order('display_order', { ascending: true })
 
   if (error) {
@@ -31,7 +31,7 @@ export async function getProducts() {
     throw error
   }
 
-  // עיבוד הנתונים - הוסף את שם הקטגוריה והתמונה הראשית
+  // עיבוד הנתונים
   const processedProducts = products.map(product => ({
     ...product,
     category: product.categories?.name,
@@ -47,7 +47,7 @@ export async function getProducts() {
 }
 
 /**
- * Get a single product by ID with images
+ * Get a single product by ID with images and colors
  */
 export async function getProductById(productId) {
   const { data: product, error: productError } = await supabase
@@ -58,7 +58,7 @@ export async function getProductById(productId) {
       product_images (image_url, is_primary, display_order)
     `)
     .eq('id', productId)
-    .eq('is_active', true)  // 👈 גם פה - רק מוצרים פעילים!
+    .eq('is_active', true)
     .single()
 
   if (productError) {
@@ -70,26 +70,38 @@ export async function getProductById(productId) {
     return null
   }
 
+  // הביא צבעים אם המוצר יש has_color_options
+  let colors = []
+  if (product.has_color_options) {
+    const { data: colorData, error: colorError } = await supabase
+      .from('product_colors')
+      .select('id, color_name, color_code, display_order')
+      .eq('product_id', productId)
+      .order('display_order', { ascending: true })
+    
+    if (!colorError) {
+      colors = colorData || []
+    }
+  }
+
   return {
     ...product,
     category: product.categories?.name,
-    images: product.product_images || []
+    images: product.product_images || [],
+    colors: colors
   }
 }
 
 /**
  * Get public URL for an image
- * התמונות כבר מגיעות עם URL מלא מהטבלה product_images
  */
 export function getImageUrl(imageUrl) {
   if (!imageUrl) return null
   
-  // אם זה כבר URL מלא - החזר אותו
   if (imageUrl.startsWith('http')) {
     return imageUrl
   }
 
-  // אם זה רק שם קובץ - בנה URL מלא
   const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl
   return `${baseUrl}/storage/v1/object/public/product-images/${imageUrl}`
 }
@@ -102,7 +114,6 @@ export function clearProductsCache() {
   cacheTime = null
 }
 
-// ← נוסף: שליפת תוספות לפי קטגוריה (לטליתות)
 /**
  * Get add-ons for a specific category
  */
