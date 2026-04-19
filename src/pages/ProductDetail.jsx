@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getProductById } from '../lib/products'
+import { getProductById, getAddonsByCategory } from '../lib/products'
 import Breadcrumbs from '../components/Breadcrumbs'
 import { useCart } from '../context/CartContext'
 import CartDrawer from '../components/CartDrawer'
 import Header from '../components/Header'
+
+// פסוקים לרקמה על הטרה (למוצרים טליתיים)
+const TALLIT_VERSES = [
+  'אשר קידשנו במצוותיו וציוונו להתעטף בציצית',
+  'ברוך אתה ה\' אלוהינו מלך העולם אשר קידשנו במצוותיו',
+  'שמע ישראל ה\' אלוהינו ה\' אחד',
+  'ואהבת לרעך כמוך',
+  'בשם ה\' אלוהי ישראל',
+]
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -16,9 +25,17 @@ export default function ProductDetail() {
   const [error, setError] = useState(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
+  
+  // ← צבעים וחריטה
   const [selectedColor, setSelectedColor] = useState(null)
   const [engravingText, setEngravingText] = useState('')
   const [engravingColor, setEngravingColor] = useState('black')
+  
+  // ← תוספות טליות (שהיו לפני)
+  const [addons, setAddons] = useState([])
+  const [selectedAddons, setSelectedAddons] = useState({})
+  const [selectedVerse, setSelectedVerse] = useState('')
+  const [productNotes, setProductNotes] = useState('')
 
   useEffect(() => {
     async function fetchProduct() {
@@ -30,9 +47,16 @@ export default function ProductDetail() {
           return
         }
         setProduct(data)
+        
         // בחר צבע ראשון אם יש
         if (data.colors && data.colors.length > 0) {
           setSelectedColor(data.colors[0].id)
+        }
+        
+        // ← טען תוספות רק לטליתות (category_id === 1)
+        if (data.category_id === 1) {
+          const fetchedAddons = await getAddonsByCategory(1)
+          setAddons(fetchedAddons)
         }
       } catch (err) { 
         console.error('Error:', err)
@@ -44,31 +68,49 @@ export default function ProductDetail() {
     if (id) fetchProduct()
   }, [id])
 
+  // ← חישוב מחיר חריטה בהתאם לקטגוריה
   const calculateEngravingPrice = () => {
     if (!product?.allows_engraving || !engravingText.trim()) return 0
+    if (product.category_id === 4) {
+      return engravingText.trim().length * 5
+    }
     return parseFloat(product.engraving_price) || 0
   }
 
+  // ← חישוב מחיר תוספות
+  const calculateAddonsPrice = () => {
+    return addons
+      .filter(a => selectedAddons[a.id])
+      .reduce((sum, a) => sum + parseFloat(a.price), 0)
+  }
+
+  // ← toggle תוספת
+  const toggleAddon = (addonId) => {
+    setSelectedAddons(prev => ({ ...prev, [addonId]: !prev[addonId] }))
+  }
+
+  // ← המחיר הסופי: בסיס + חריטה + תוספות
   const calculateTotalPrice = () => {
     if (!product) return 0
     const basePrice = (product.on_sale && product.sale_price) 
       ? parseFloat(product.sale_price) 
       : parseFloat(product.price) || 0
-    return basePrice + calculateEngravingPrice()
+    return basePrice + calculateEngravingPrice() + calculateAddonsPrice()
   }
 
+  // ← כשלוחצים "הוסף לסל" - שלח הכל
   const handleAddToCart = () => {
-    const cartItem = {
-      ...product,
-      quantity,
-      selectedColor: selectedColor ? product.colors?.find(c => c.id === selectedColor) : null,
-      engraving: product.allows_engraving ? {
-        text: engravingText.trim(),
-        color: engravingColor,
-        price: calculateEngravingPrice()
-      } : null
-    }
-    addToCart(cartItem)
+    const chosenAddons = addons.filter(a => selectedAddons[a.id])
+    addToCart(
+      product, 
+      quantity, 
+      engravingText.trim() ? engravingText : null,
+      chosenAddons,  // ← תוספות טליות
+      selectedVerse,  // ← פסוק
+      productNotes,   // ← הערות
+      selectedColor,  // ← צבע המוצר
+      engravingColor  // ← צבע החריטה
+    )
   }
 
   if (loading) return (
@@ -179,7 +221,7 @@ export default function ProductDetail() {
               )}
             </div>
 
-            {/* תיאור */}
+            {/* תיאור המוצר */}
             {product.description && (
               <div className="mb-8 pb-8 border-b border-gray-200">
                 <p className="text-gray-700 leading-relaxed text-sm">
@@ -191,7 +233,7 @@ export default function ProductDetail() {
             {/* אפשרויות */}
             <div className="mb-8 space-y-8">
               
-              {/* בחירת צבע */}
+              {/* 1️⃣ בחירת צבע המוצר */}
               {product.has_color_options && product.colors && product.colors.length > 0 && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
@@ -222,7 +264,66 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              {/* חריטה */}
+              {/* 2️⃣ תוספות טליות (פסוקים, נרות וכו') */}
+              {product.category_id === 1 && (
+                <div className="border border-gray-200 rounded-lg p-5 bg-gray-50 flex flex-col gap-5">
+                  
+                  {/* בחירת פסוק לרקמה */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-800">
+                      * בחרו פסוק לרקמה על הטרה :
+                    </label>
+                    <select
+                      value={selectedVerse}
+                      onChange={e => setSelectedVerse(e.target.value)}
+                      className="w-full border border-gray-300 rounded px-4 py-3 bg-white text-right focus:outline-none focus:border-black text-sm"
+                    >
+                      <option value="">— בחרו פסוק —</option>
+                      {TALLIT_VERSES.map(v => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* checkboxes תוספות */}
+                  {addons.length > 0 && (
+                    <div className="flex flex-col gap-3">
+                      {addons.map(addon => (
+                        <label key={addon.id} className="flex items-center justify-between gap-3 cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={!!selectedAddons[addon.id]}
+                              onChange={() => toggleAddon(addon.id)}
+                              className="w-5 h-5 cursor-pointer accent-black"
+                            />
+                            <span className="text-sm text-gray-800">{addon.name}</span>
+                          </div>
+                          <span className="text-sm font-semibold text-orange-600">
+                            ₪{parseFloat(addon.price).toFixed(2)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* הערות */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-800">
+                      הוסיפו הערות למוצר במידת הצורך :
+                    </label>
+                    <textarea
+                      value={productNotes}
+                      onChange={e => setProductNotes(e.target.value)}
+                      rows={3}
+                      placeholder="לדוגמה: מידות מיוחדות, צבע מועדף..."
+                      className="w-full border border-gray-300 rounded px-4 py-3 text-sm bg-white resize-none focus:outline-none focus:border-black"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 3️⃣ חריטה */}
               {product.allows_engraving && (
                 <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
                   <label className="flex items-center gap-2 mb-4">
@@ -241,7 +342,7 @@ export default function ProductDetail() {
                     </span>
                   </label>
 
-                  {engravingText.trim().length > 0 || true && (
+                  {engravingText.trim().length > 0 && (
                     <div className="space-y-4">
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-2">
@@ -286,6 +387,10 @@ export default function ProductDetail() {
                         </div>
                       </div>
                     </div>
+                  )}
+
+                  {engravingText.trim().length === 0 && (
+                    <p className="text-xs text-gray-500 mt-2">סמן את התיבה כדי להוסיף חריטה</p>
                   )}
                 </div>
               )}
