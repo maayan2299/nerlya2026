@@ -31,44 +31,20 @@ export function CartProvider({ children }) {
     localStorage.setItem('nerlya-cart', JSON.stringify(cart))
   }, [cart])
 
-  // הוסף מוצר לעגלה (עם תמיכה בחריטה חכמה!)
-  // ← נוסף: פרמטרים addons, verse, notes לתמיכה בתוספות טלית
-  const addToCart = (product, quantity = 1, engravingText = null, addons = [], verse = '', notes = '') => {
+  // הוסף מוצר לעגלה (עם תמיכה בחריטה, צבעים וטוספות!)
+  const addToCart = (product, quantity = 1, customizations = {}, extraPrice = 0) => {
     setCart(prevCart => {
-      // צור מזהה ייחודי למוצר (כולל חריטה אם יש)
-      // ← נוסף: המזהה כולל גם את התוספות שנבחרו
-      const addonsKey = addons.map(a => a.id).sort().join(',')
-      const uniqueId = engravingText 
-        ? `${product.id}-engraved-${engravingText}-${addonsKey}`
-        : `${product.id}-${addonsKey}-${verse}`
+      // צור מזהה ייחודי למוצר
+      const customizationKey = JSON.stringify(customizations || {})
+      const uniqueId = `${product.id}-${customizationKey}`
       
-      // חישוב מחיר חריטה חכם לפי קטגוריה
-      let engravingPrice = 0
-      if (engravingText) {
-        // קטגוריה 4 = כיסוי טלית ותפילין = 5₪ לאות
-        if (product.category_id === 4) {
-          engravingPrice = engravingText.length * 5
-        } else {
-          // שאר הקטגוריות = מחיר קבוע
-          engravingPrice = parseFloat(product.engraving_price) || 10
-        }
-      }
-
-      // ← נוסף: חישוב מחיר תוספות
-      const addonsPrice = addons.reduce((sum, a) => sum + parseFloat(a.price || 0), 0)
-      
-      // בדוק אם המוצר (עם אותה חריטה) כבר קיים בעגלה
-      const existingItem = prevCart.find(item => {
-        if (engravingText) {
-          return item.uniqueId === uniqueId
-        }
-        return item.id === product.id && !item.engravingText
-      })
+      // בדוק אם המוצר (עם אותן התאמות) כבר קיים בעגלה
+      const existingItem = prevCart.find(item => item.uniqueId === uniqueId)
       
       if (existingItem) {
         // אם קיים - עדכן כמות
         return prevCart.map(item =>
-          (item.uniqueId || item.id) === uniqueId
+          item.uniqueId === uniqueId
             ? { ...item, quantity: item.quantity + quantity }
             : item
         )
@@ -78,12 +54,8 @@ export function CartProvider({ children }) {
           ...product, 
           quantity,
           uniqueId,
-          engravingText,
-          engravingPrice,
-          selectedAddons: addons,   // ← נוסף
-          addonsPrice,              // ← נוסף
-          selectedVerse: verse,     // ← נוסף
-          productNotes: notes,      // ← נוסף
+          customizations: customizations || {},
+          extraPrice: extraPrice || 0,
         }
         return [...prevCart, newItem]
       }
@@ -95,7 +67,7 @@ export function CartProvider({ children }) {
 
   // הסר מוצר מהעגלה
   const removeFromCart = (uniqueId) => {
-    setCart(prevCart => prevCart.filter(item => (item.uniqueId || item.id) !== uniqueId))
+    setCart(prevCart => prevCart.filter(item => item.uniqueId !== uniqueId))
   }
 
   // עדכן כמות מוצר
@@ -107,7 +79,7 @@ export function CartProvider({ children }) {
     
     setCart(prevCart =>
       prevCart.map(item =>
-        (item.uniqueId || item.id) === uniqueId
+        item.uniqueId === uniqueId
           ? { ...item, quantity }
           : item
       )
@@ -119,16 +91,13 @@ export function CartProvider({ children }) {
     setCart([])
   }
 
-  // חשב סכום ביניים (כולל חריטה!)
-  // ← נוסף: מחשב גם addonsPrice + מחיר מבצע
+  // חשב סכום ביניים (כולל התאמות!)
   const getSubtotal = () => {
     return cart.reduce((total, item) => {
       const basePrice = (item.on_sale && item.sale_price)
         ? parseFloat(item.sale_price)
         : parseFloat(item.price) || 0
-      const engravingPrice = parseFloat(item.engravingPrice) || 0
-      const addonsPrice = parseFloat(item.addonsPrice) || 0  // ← נוסף
-      const itemTotal = (basePrice + engravingPrice + addonsPrice) * item.quantity
+      const itemTotal = (basePrice + (item.extraPrice || 0)) * item.quantity
       return total + itemTotal
     }, 0)
   }
