@@ -36,7 +36,7 @@ export function CartProvider({ children }) {
   const addToCart = (product, quantity = 1, engravingText = null, addons = [], verse = '', notes = '') => {
     setCart(prevCart => {
       // צור מזהה ייחודי למוצר (כולל חריטה אם יש)
-      // ← נוסף: המזהה כולל גם את התוספות שנבחרו כדי שכל קומבינציה תהיה שורה נפרדת בעגלה
+      // ← נוסף: המזהה כולל גם את התוספות שנבחרו
       const addonsKey = addons.map(a => a.id).sort().join(',')
       const uniqueId = engravingText 
         ? `${product.id}-engraved-${engravingText}-${addonsKey}`
@@ -120,7 +120,7 @@ export function CartProvider({ children }) {
   }
 
   // חשב סכום ביניים (כולל חריטה!)
-  // ← נוסף: מחשב גם addonsPrice
+  // ← נוסף: מחשב גם addonsPrice + מחיר מבצע
   const getSubtotal = () => {
     return cart.reduce((total, item) => {
       const basePrice = (item.on_sale && item.sale_price)
