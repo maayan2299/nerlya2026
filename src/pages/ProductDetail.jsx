@@ -162,8 +162,7 @@ export default function ProductDetail() {
     : []
 
   const mainImage = images && images.length > 0 ? images[selectedImageIndex] : null
-  const engravingTypes = Array.isArray(product.engraving_type) ? product.engraving_type : product.engraving_type ? [product.engraving_type] : []
-  const hasCustomization = product.allows_engraving && engravingTypes.length > 0
+  const hasCustomization = product.allows_engraving
 
   // קרא הגדרות מיתוג מה-admin (localStorage)
   const getEngravingConfig = () => {
@@ -188,14 +187,13 @@ export default function ProductDetail() {
 
   const calculateExtraPrice = () => {
     let extra = 0
-    // מחיר התאמה אישית
-    engravingTypes.forEach(type => {
-      const config = engravingConfig[type]
-      const data = customizationData[type] || {}
-      if (config && (config?.fields.includes('checkbox') ? data.checked : data.text?.trim())) {
-        extra += config.price
-      }
-    })
+    
+    // מחיר חריטה
+    const engravingData = customizationData.engraving || {}
+    if (engravingData.checked && engravingData.text?.trim()) {
+      extra += 10 // מחיר חריטה קבוע
+    }
+    
     // מחיר ווריאנטים
     Object.values(selectedOptions).forEach(val => {
       if (val && val.price_delta) extra += parseFloat(val.price_delta) || 0
@@ -217,13 +215,18 @@ export default function ProductDetail() {
     }
     
     const customizations = {}
-    engravingTypes.forEach(type => {
-      const data = customizationData[type] || {}
-      if (data.text?.trim() || data.checked) customizations[type] = data
-    })
+    
+    // הוסף חריטה אם נבחרה
+    const engravingData = customizationData.engraving || {}
+    if (engravingData.checked && engravingData.text?.trim()) {
+      customizations.engraving = engravingData
+    }
+    
+    // הוסף ווריאנטים
     if (Object.keys(selectedOptions).length > 0) {
       customizations._options = selectedOptions
     }
+    
     addToCart(product, quantity, customizations, calculateExtraPrice())
   }
 
@@ -333,55 +336,40 @@ export default function ProductDetail() {
             )}
 
             {/* התאמה אישית */}
-            {hasCustomization && engravingTypes.map(type => {
-              const config = engravingConfig[type]
-              const data = customizationData[type] || {}
-              if (!config) return null
-              
-              return (
-                <div key={type} className="border border-gray-200 rounded-lg mb-4 overflow-hidden shadow-sm">
-                  <div className="bg-gray-50 px-4 py-3 flex justify-between border-b border-gray-200">
-                    <span className="text-sm font-semibold">{config.icon} {config.label}</span>
-                    <span className="text-sm font-bold" style={{ color: '#C9A84C' }}>+{config.priceLabel}</span>
-                  </div>
-                  <div className="p-4 space-y-4">
-                    {config.fields.includes('checkbox') && (
-                      <label className="flex items-center gap-3 cursor-pointer justify-start">
-                        <input 
-                          type="checkbox" 
-                          checked={data.checked || false} 
-                          onChange={e => updateCustomization(type, 'checked', e.target.checked)} 
-                          className="w-4 h-4 accent-black" 
-                        />
-                        <span className="text-sm">{config.checkboxLabel}</span>
-                      </label>
-                    )}
-                    {config.fields.includes('text') && (!config.fields.includes('checkbox') || data.checked) && (
+            {hasCustomization && (
+              <div className="border border-gray-200 rounded-lg mb-4 overflow-hidden shadow-sm">
+                <div className="bg-gray-50 px-4 py-3 flex justify-between border-b border-gray-200">
+                  <span className="text-sm font-semibold">✍️ חריטה</span>
+                  <span className="text-sm font-bold" style={{ color: '#C9A84C' }}>+₪10</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <label className="flex items-center gap-3 cursor-pointer justify-start">
+                    <input 
+                      type="checkbox" 
+                      checked={customizationData.engraving?.checked || false} 
+                      onChange={e => updateCustomization('engraving', 'checked', e.target.checked)} 
+                      className="w-4 h-4 accent-black" 
+                    />
+                    <span className="text-sm">אני רוצה חריטה על המוצר</span>
+                  </label>
+                  {(customizationData.engraving?.checked) && (
+                    <div className="space-y-4">
                       <input 
                         type="text" 
-                        value={data.text || ''} 
-                        onChange={e => updateCustomization(type, 'text', e.target.value)} 
-                        placeholder={config.textPlaceholder} 
+                        value={customizationData.engraving?.text || ''} 
+                        onChange={e => updateCustomization('engraving', 'text', e.target.value)} 
+                        placeholder="מה אתה רוצה לחרוט? (עד 50 תווים)" 
+                        maxLength="50"
                         className="w-full border p-2 text-right text-sm outline-none rounded-sm" 
                       />
-                    )}
-                    {config.fields.includes('color') && config.colors && (!config.fields.includes('checkbox') || data.checked) && (
-                      <div className="flex flex-wrap gap-2 justify-start">
-                        {config.colors.map(color => (
-                          <button 
-                            key={color.value} 
-                            onClick={() => updateCustomization(type, 'color', color.value)} 
-                            className={`w-8 h-8 rounded border-2 ${data.color === color.value ? 'border-black' : 'border-gray-300'}`} 
-                            style={{ backgroundColor: color.hex }} 
-                            title={color.name} 
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                      <p className="text-xs text-gray-500">
+                        {(customizationData.engraving?.text || '').length}/50
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )
-            })}
+              </div>
+            )}
 
             {/* הערות */}
             <div className="mb-6">
