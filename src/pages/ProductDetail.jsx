@@ -408,7 +408,7 @@ export default function ProductDetail() {
             <div className="border-t border-gray-200">
               {[
                 { id: 'description', title: 'מידע על המוצר', content: product.description || 'אין תיאור זמין' },
-                { id: 'shipping', title: 'משלוחים והחזרות', content: '🚚 משלוח חינם מעל ₪299 | 📦 5-7 ימי עסקים' }
+                { id: 'shipping', title: 'משלוחים והחזרות', content: '🚚 משלוח חינם מעל ₪400 | 📦 5-7 ימי עסקים' }
               ].map(item => (
                 <div key={item.id} className="border-b border-gray-200">
                   <button onClick={() => setOpenAccordion(openAccordion === item.id ? null : item.id)} className="w-full flex justify-between py-4 text-sm font-medium hover:text-black">
