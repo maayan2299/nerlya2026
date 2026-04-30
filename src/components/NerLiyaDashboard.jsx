@@ -322,7 +322,7 @@ const MainDashboard = ({ onLogout }) => {
     }
   };
 
-  const openEditModal = (product) => {
+  const openEditModal = async (product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
