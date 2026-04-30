@@ -337,6 +337,11 @@ const MainDashboard = ({ onLogout }) => {
       sale_percentage: product.sale_percentage || '',
       sale_price: product.sale_price || ''
     });
+
+    const { data } = await supabase.from('product_colors').select('*').eq('product_id', product.id);
+  setProductColors(data || []);
+  setNewColor({ name: '', code: '#000000' });
+
   };
 
   const openAddModal = () => {
@@ -927,10 +932,88 @@ const MainDashboard = ({ onLogout }) => {
                   )}
                 </div>
 
+                
+                
                 {!editingProduct && (
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>תמונה ראשית</label>
                     <input type="file" accept="image/*" onChange={(e) => setNewImageFile(e.target.files[0])} style={{ padding: '8px' }} />
+                  </div>
+                )}
+                
+                                {/* סקשן צבעים - חדש! */}
+                {editingProduct && (
+                  <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>🎨 צבעים זמינים</h3>
+                    
+                    {/* הוספת צבע חדש */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', marginBottom: '16px' }}>
+                      <input 
+                        type="text" 
+                        value={newColor.name} 
+                        onChange={(e) => setNewColor({...newColor, name: e.target.value})} 
+                        placeholder="שם צבע (לבן, שחור...)" 
+                      />
+                      <input 
+                        type="color" 
+                        value={newColor.code || '#000000'} 
+                        onChange={(e) => setNewColor({...newColor, code: e.target.value})} 
+                        style={{ width: '60px', height: '45px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px' }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={async () => {
+                          if (!newColor.name || !newColor.code) {
+                            alert('אנא מלא שם וצבע');
+                            return;
+                          }
+                          await supabase.from('product_colors').insert([{
+                            product_id: editingProduct.id,
+                            color_name: newColor.name,
+                            color_code: newColor.code.toLowerCase(),
+                            display_order: productColors.length
+                          }]);
+                          const { data } = await supabase.from('product_colors').select('*').eq('product_id', editingProduct.id);
+                          setProductColors(data || []);
+                          setNewColor({ name: '', code: '#000000' });
+                        }}
+                        style={{ padding: '0 16px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '14px' }}
+                      >
+                        הוסף
+                      </button>
+                    </div>
+                
+                    {/* רשימת הצבעים */}
+                    {productColors.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {productColors.map(color => (
+                          <div key={color.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', background: '#fff', borderRadius: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: color.color_code }}></div>
+                              <span style={{ fontSize: '14px', fontWeight: '500' }}>{color.color_name}</span>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm('למחוק צבע?')) return;
+                                await supabase.from('product_colors').delete().eq('id', color.id);
+                                const { data } = await supabase.from('product_colors').select('*').eq('product_id', editingProduct.id);
+                                setProductColors(data || []);
+                              }}
+                              style={{ background: '#fff', border: '1px solid #dc2626', color: '#dc2626', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                            >
+                              מחק
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {productColors.length === 0 && (
+                      <div style={{ padding: '12px', background: '#fff', borderRadius: '4px', color: '#666', fontSize: '13px', textAlign: 'center' }}>
+                        לא נוספו צבעים למוצר זה
+                      </div>
+                    )}
                   </div>
                 )}
 
