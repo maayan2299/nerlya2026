@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
-import { getImageUrl } from '../lib/products'
 
 export default function CartDrawer() {
   const { 
@@ -24,12 +23,16 @@ export default function CartDrawer() {
         onClick={() => setIsCartOpen(false)}
       ></div>
 
-      {/* מגירת עגלה */}
-      <div className="fixed top-0 left-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-[151] flex flex-col" dir="rtl">
+      {/* מגירת עגלה - הוגדר רוחב קשיח כדי למנוע קריסה של התצוגה */}
+      <div 
+        className="fixed top-0 right-0 h-full bg-white shadow-2xl z-[151] flex flex-col overflow-hidden" 
+        dir="rtl"
+        style={{ width: '100%', maxWidth: '420px', minWidth: '320px' }}
+      >
         
         {/* כותרת */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-2xl font-bold">העגלה שלי ({cart.length})</h2>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-xl sm:text-2xl font-bold">העגלה שלי ({cart.length})</h2>
           <button 
             onClick={() => setIsCartOpen(false)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -41,7 +44,7 @@ export default function CartDrawer() {
         </div>
 
         {/* תוכן העגלה */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {cart.length === 0 ? (
             <div className="text-center py-12">
               <svg className="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
@@ -50,7 +53,7 @@ export default function CartDrawer() {
               <p className="text-gray-500 mb-4">העגלה שלך ריקה</p>
               <button
                 onClick={() => setIsCartOpen(false)}
-                className="px-6 py-3 bg-black text-white hover:bg-gray-800 transition-colors"
+                className="px-6 py-3 bg-black text-white hover:bg-gray-800 transition-colors whitespace-nowrap rounded"
               >
                 המשך בקניות
               </button>
@@ -58,15 +61,16 @@ export default function CartDrawer() {
           ) : (
             <div className="space-y-4">
               {cart.map((item) => {
-                const itemImage = item.main_image_url ? getImageUrl(item.main_image_url) : null
-                const basePrice = parseFloat(item.price) || 0
+                // ✅ תקן - בדוק את כל האפשרויות של תמונה
+                const itemImage = item.image_url || item.main_image_url || item.primary_image || item.product?.main_image_url || null;
+                const basePrice = parseFloat(item.sale_price || item.price) || 0
                 const engravingPrice = parseFloat(item.engravingPrice) || 0
                 const itemTotal = (basePrice + engravingPrice) * item.quantity
 
                 return (
-                  <div key={item.uniqueId || item.id} className="flex gap-4 pb-4 border-b border-gray-200">
-                    {/* תמונה */}
-                    <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                  <div key={item.uniqueId || item.id} className="flex gap-3 sm:gap-4 pb-4 border-b border-gray-200">
+                    {/* תמונה - נוסף flex-shrink-0 כדי שהתמונה לא תימעך */}
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden shadow-sm">
                       {itemImage ? (
                         <img src={itemImage} alt={item.name} className="w-full h-full object-cover" />
                       ) : (
@@ -78,16 +82,23 @@ export default function CartDrawer() {
                       )}
                     </div>
 
-                    {/* פרטים */}
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm mb-1">{item.name}</h3>
+                    {/* פרטים - נוסף min-w-0 כדי למנוע דחיפה של גבולות הקונטיינר */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm mb-1 line-clamp-2">{item.name}</h3>
                       
-                      {/* מחיר בסיס */}
-                      <p className="text-sm text-gray-600">₪{basePrice.toLocaleString('he-IL')}</p>
+                      {/* מחיר */}
+                      {item.sale_price ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-red-600 font-medium text-sm">₪{parseFloat(item.sale_price).toLocaleString('he-IL')}</span>
+                          <span className="text-gray-400 line-through text-xs">₪{parseFloat(item.price).toLocaleString('he-IL')}</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600">₪{basePrice.toLocaleString('he-IL')}</p>
+                      )}
                       
                       {/* חריטה אם יש */}
                       {item.engravingText && (
-                        <div className="mt-1 text-xs bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block">
+                        <div className="mt-1 text-xs bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block truncate max-w-full">
                           <span className="text-amber-700">✨ חריטת שם: </span>
                           <span className="font-medium text-amber-900">{item.engravingText}</span>
                           <span className="text-amber-600"> (+₪{engravingPrice})</span>
@@ -112,8 +123,8 @@ export default function CartDrawer() {
                       </div>
                     </div>
 
-                    {/* מחיר כולל + מחיקה */}
-                    <div className="flex flex-col items-end justify-between">
+                    {/* מחיר כולל + מחיקה - הוגדר רוחב מינימלי כדי שלא יימעך */}
+                    <div className="flex flex-col items-end justify-between flex-shrink-0 min-w-fit pl-1">
                       <button
                         onClick={() => removeFromCart(item.uniqueId || item.id)}
                         className="text-gray-400 hover:text-red-500 transition-colors"
@@ -138,7 +149,7 @@ export default function CartDrawer() {
 
         {/* סיכום + כפתור תשלום */}
         {cart.length > 0 && (
-          <div className="border-t border-gray-200 p-6 bg-gray-50">
+          <div className="border-t border-gray-200 p-4 sm:p-6 bg-gray-50 flex-shrink-0">
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">סכום ביניים:</span>
@@ -147,7 +158,7 @@ export default function CartDrawer() {
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">משלוח:</span>
                 <span className="font-medium">
-                  {getShipping() === 0 ? 'חינם' : `₪${getShipping()}`}
+                  {getShipping() === 0 ? <span className="text-green-600">חינם!</span> : `₪${getShipping()}`}
                 </span>
               </div>
               {getShipping() > 0 && (
@@ -162,15 +173,15 @@ export default function CartDrawer() {
             </div>
             
             <Link
-              to="/cart"
+              to="/payment"
               onClick={() => setIsCartOpen(false)}
-              className="block w-full bg-black text-white text-center py-4 font-medium hover:bg-gray-800 transition-colors mb-2"
+              className="block text-center w-full bg-black text-white py-3 sm:py-4 font-medium hover:bg-gray-800 transition-colors mb-3 rounded"
             >
               מעבר לתשלום
             </Link>
             <button
               onClick={() => setIsCartOpen(false)}
-              className="block w-full border-2 border-black text-black text-center py-4 font-medium hover:bg-gray-50 transition-colors"
+              className="block text-center w-full border-2 border-black text-black py-3 sm:py-4 font-medium hover:bg-gray-50 transition-colors rounded"
             >
               המשך בקניות
             </button>
