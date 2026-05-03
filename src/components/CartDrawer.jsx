@@ -61,11 +61,24 @@ export default function CartDrawer() {
           ) : (
             <div className="space-y-4">
               {cart.map((item) => {
-                // ✅ תקן - בדוק את כל האפשרויות של תמונה
-                const itemImage = item.image_url || item.main_image_url || item.primary_image || item.product?.main_image_url || null;
-                const basePrice = parseFloat(item.sale_price || item.price) || 0
-                const engravingPrice = parseFloat(item.engravingPrice) || 0
-                const itemTotal = (basePrice + engravingPrice) * item.quantity
+                // ✅ תיקון תמונות - חיפוש קודם במערך product_images, לאחר מכן fallbacks
+                const itemImage =
+                  item.product_images?.find(img => img.is_primary)?.image_url ||
+                  item.product_images?.[0]?.image_url ||
+                  item.main_image_url ||
+                  item.image_url ||
+                  item.primary_image ||
+                  null;
+                const basePrice = (item.on_sale && item.sale_price)
+                  ? parseFloat(item.sale_price)
+                  : parseFloat(item.price) || 0
+                const extraPrice = parseFloat(item.extraPrice) || 0
+                const itemTotal = (basePrice + extraPrice) * item.quantity
+
+                // ✅ קריאת התאמות מהמבנה החדש
+                const engravingData = item.customizations?.engraving
+                const optionsData = item.customizations?._options || {}
+                const optionEntries = Object.entries(optionsData)
 
                 return (
                   <div key={item.uniqueId || item.id} className="flex gap-3 sm:gap-4 pb-4 border-b border-gray-200">
@@ -95,13 +108,34 @@ export default function CartDrawer() {
                       ) : (
                         <p className="text-sm text-gray-600">₪{basePrice.toLocaleString('he-IL')}</p>
                       )}
-                      
-                      {/* חריטה אם יש */}
-                      {item.engravingText && (
+
+                      {/* ✅ אפשרויות שנבחרו (צבע / גודל / וכו') */}
+                      {optionEntries.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {optionEntries.map(([optName, optVal]) => {
+                            const label = optVal?.label ?? optVal?.name ?? optVal
+                            if (!label) return null
+                            return (
+                              <span
+                                key={optName}
+                                className="text-xs bg-gray-100 border border-gray-200 rounded px-2 py-0.5"
+                              >
+                                <span className="text-gray-600">{optName}: </span>
+                                <span className="font-medium text-gray-900">{label}</span>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* ✅ חריטה (מהמבנה החדש customizations.engraving) */}
+                      {engravingData?.text && (
                         <div className="mt-1 text-xs bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block truncate max-w-full">
                           <span className="text-amber-700">✨ חריטת שם: </span>
-                          <span className="font-medium text-amber-900">{item.engravingText}</span>
-                          <span className="text-amber-600"> (+₪{engravingPrice})</span>
+                          <span className="font-medium text-amber-900">{engravingData.text}</span>
+                          {engravingData.color && (
+                            <span className="text-amber-700"> ({engravingData.color})</span>
+                          )}
                         </div>
                       )}
                       
@@ -135,7 +169,7 @@ export default function CartDrawer() {
                       </button>
                       <div className="text-right">
                         <p className="font-semibold text-sm">₪{itemTotal.toLocaleString('he-IL')}</p>
-                        {item.engravingText && (
+                        {engravingData?.text && (
                           <p className="text-xs text-gray-500">כולל חריטה</p>
                         )}
                       </div>
