@@ -370,18 +370,40 @@ export default function CheckoutPage() {
               <h2 className="text-xl font-bold mb-6">סיכום הזמנה</h2>
               <div className="mb-6 max-h-64 overflow-y-auto">
                 {cart.map((item) => {
-                  const basePrice = parseFloat(item.sale_price || item.price) || 0
-                  const engravingPrice = parseFloat(item.engravingPrice) || 0
+                  const basePrice = (item.on_sale && item.sale_price)
+                    ? parseFloat(item.sale_price)
+                    : parseFloat(item.price) || 0
+                  const extraPrice = parseFloat(item.extraPrice) || 0
+
+                  // ✅ קריאת התאמות מהמבנה החדש
+                  const engravingData = item.customizations?.engraving
+                  const optionsData = item.customizations?._options || {}
+                  const optionEntries = Object.entries(optionsData)
+
                   return (
-                    <div key={item.uniqueId || item.id} className="flex justify-between items-center py-2 text-sm border-b border-gray-200 last:border-0">
-                      <div className="flex-1">
+                    <div key={item.uniqueId || item.id} className="flex justify-between items-start py-2 text-sm border-b border-gray-200 last:border-0">
+                      <div className="flex-1 min-w-0 pl-2">
                         <div className="font-medium">{item.name}</div>
                         <div className="text-gray-600">כמות: {item.quantity}</div>
-                        {item.engravingText && (
-                          <div className="text-xs text-amber-700">✨ חריטה: {item.engravingText}</div>
+                        {/* ✅ אפשרויות שנבחרו */}
+                        {optionEntries.map(([optName, optVal]) => {
+                          const label = optVal?.label ?? optVal?.name ?? optVal
+                          if (!label) return null
+                          return (
+                            <div key={optName} className="text-xs text-gray-700">
+                              {optName}: <span className="font-medium">{label}</span>
+                            </div>
+                          )
+                        })}
+                        {/* ✅ חריטה */}
+                        {engravingData?.text && (
+                          <div className="text-xs text-amber-700">
+                            ✨ חריטה: {engravingData.text}
+                            {engravingData.color && ` (${engravingData.color})`}
+                          </div>
                         )}
                       </div>
-                      <div className="font-medium">₪{((basePrice + engravingPrice) * item.quantity).toLocaleString('he-IL')}</div>
+                      <div className="font-medium whitespace-nowrap">₪{((basePrice + extraPrice) * item.quantity).toLocaleString('he-IL')}</div>
                     </div>
                   )
                 })}
