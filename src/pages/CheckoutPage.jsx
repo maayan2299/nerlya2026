@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { supabase } from '../lib/supabase'
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
@@ -108,6 +109,29 @@ export default function CheckoutPage() {
         date: new Date().toISOString()
       }
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
+
+      // ✅ שמירת ההזמנה בטבלת orders ב-Supabase עם status='pending'
+      // הסטטוס יעודכן ל-'paid' ב-PaymentSuccess אחרי שהתשלום עבר בהצלחה
+      const { error: dbError } = await supabase.from('orders').insert([{
+        order_id: orderId,
+        customer_name: formData.fullName,
+        customer_email: formData.email,
+        customer_phone: formData.phone,
+        address: orderData.customerInfo.address,
+        items: cart, // jsonb - כולל customizations עם הצבעים, חריטה ואפשרויות
+        subtotal: getSubtotal(),
+        shipping: shippingCost,
+        total: finalTotal,
+        shipping_method: formData.shippingMethod,
+        notes: formData.notes,
+        blessing: formData.blessing,
+        status: 'pending'
+      }])
+
+      if (dbError) {
+        // אם השמירה נכשלת - לוג בלבד; לא חוסם תשלום
+        console.error('Failed to save order to Supabase:', dbError)
+      }
 
       // --- תחילת מנגנון התשלום דרך Edge Function ---
       
