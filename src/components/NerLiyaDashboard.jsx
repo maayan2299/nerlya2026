@@ -106,9 +106,55 @@ const MainDashboard = ({ onLogout }) => {
   const [newImageFile, setNewImageFile] = useState(null);
   const [newColor, setNewColor] = useState({ name: '', code: '' });
 
+  // ✅ Orders state
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // ✅ טעינת הזמנות מטבלת orders ב-Supabase
+  const loadOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error loading orders:', error);
+      } else {
+        setOrders(data || []);
+      }
+    } catch (err) {
+      console.error('Error loading orders:', err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  // ✅ עדכון סטטוס הזמנה
+  const updateOrderStatus = async (orderId, newStatus) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+    if (error) {
+      alert('שגיאה בעדכון סטטוס: ' + error.message);
+    } else {
+      loadOrders();
+    }
+  };
+
+  // ✅ טעינת הזמנות כשנכנסים לטאב
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      loadOrders();
+    }
+  }, [activeTab]);
 
   const loadData = async () => {
     setLoading(true);
@@ -490,7 +536,7 @@ const MainDashboard = ({ onLogout }) => {
       {/* Tabs Navigation */}
       <div style={{ background: '#fff', borderBottom: '1px solid #eee' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '0' }}>
-          {['overview', 'products', 'categories'].map(tab => (
+          {['overview', 'orders', 'products', 'categories'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -507,6 +553,7 @@ const MainDashboard = ({ onLogout }) => {
               }}
             >
               {tab === 'overview' && 'סקירה כללית'}
+              {tab === 'orders' && 'הזמנות'}
               {tab === 'products' && 'מוצרים'}
               {tab === 'categories' && 'קטגוריות'}
             </button>
@@ -564,6 +611,239 @@ const MainDashboard = ({ onLogout }) => {
                 })}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ✅ Orders Tab */}
+        {activeTab === 'orders' && (
+          <div>
+            {/* Toolbar - מסננים */}
+            <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <select
+                value={orderStatusFilter}
+                onChange={(e) => setOrderStatusFilter(e.target.value)}
+                style={{ width: 'auto', minWidth: '180px' }}
+              >
+                <option value="all">כל ההזמנות</option>
+                <option value="paid">שולמו</option>
+                <option value="pending">ממתינות לתשלום</option>
+                <option value="shipped">נשלחו</option>
+                <option value="completed">הושלמו</option>
+                <option value="cancelled">בוטלו</option>
+              </select>
+              <button
+                onClick={loadOrders}
+                style={{ background: '#000', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+              >
+                רענן
+              </button>
+              <div style={{ marginRight: 'auto', fontSize: '14px', color: '#666' }}>
+                סה"כ: {orders.filter(o => orderStatusFilter === 'all' || o.status === orderStatusFilter).length} הזמנות
+              </div>
+            </div>
+
+            {/* רשימת הזמנות */}
+            {ordersLoading ? (
+              <div style={{ background: '#fff', padding: '60px', borderRadius: '8px', textAlign: 'center', color: '#666' }}>
+                טוען הזמנות...
+              </div>
+            ) : orders.length === 0 ? (
+              <div style={{ background: '#fff', padding: '60px', borderRadius: '8px', textAlign: 'center', color: '#666' }}>
+                <div style={{ fontSize: '48px', marginBottom: '10px' }}>📦</div>
+                <div style={{ fontSize: '18px', fontWeight: '500' }}>אין הזמנות עדיין</div>
+                <div style={{ fontSize: '14px', marginTop: '8px' }}>הזמנות חדשות יופיעו כאן אוטומטית</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {orders
+                  .filter(o => orderStatusFilter === 'all' || o.status === orderStatusFilter)
+                  .map(order => {
+                    const isExpanded = expandedOrderId === order.id;
+                    const items = Array.isArray(order.items) ? order.items : [];
+                    const statusColors = {
+                      paid: { bg: '#d1fae5', color: '#065f46', label: 'שולם' },
+                      pending: { bg: '#fef3c7', color: '#92400e', label: 'ממתין לתשלום' },
+                      shipped: { bg: '#dbeafe', color: '#1e40af', label: 'נשלח' },
+                      completed: { bg: '#e0e7ff', color: '#3730a3', label: 'הושלם' },
+                      cancelled: { bg: '#fee2e2', color: '#991b1b', label: 'בוטל' }
+                    };
+                    const statusStyle = statusColors[order.status] || { bg: '#f3f4f6', color: '#374151', label: order.status || '-' };
+
+                    return (
+                      <div key={order.id} style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                        {/* כותרת ההזמנה - תמיד מוצגת */}
+                        <div
+                          onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                          style={{ padding: '20px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderBottom: isExpanded ? '1px solid #eee' : 'none' }}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                              {order.customer_name || 'ללא שם'}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#666' }}>
+                              #{order.order_id} · {order.created_at ? new Date(order.created_at).toLocaleString('he-IL') : ''}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: '13px', color: '#666' }}>
+                              {items.length} פריטים
+                            </div>
+                            <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                              ₪{Number(order.total || 0).toLocaleString('he-IL')}
+                            </div>
+                            <span style={{ background: statusStyle.bg, color: statusStyle.color, padding: '4px 12px', borderRadius: '4px', fontSize: '13px', fontWeight: '500' }}>
+                              {statusStyle.label}
+                            </span>
+                            <span style={{ fontSize: '20px', color: '#999' }}>{isExpanded ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+
+                        {/* תוכן מורחב */}
+                        {isExpanded && (
+                          <div style={{ padding: '20px', background: '#fafafa' }}>
+                            {/* פרטי לקוח */}
+                            <div style={{ marginBottom: '20px' }}>
+                              <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>פרטי לקוח:</div>
+                              <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#444' }}>
+                                <div>📞 {order.customer_phone || '-'}</div>
+                                <div>📧 {order.customer_email || '-'}</div>
+                                <div>📍 {order.address || '-'}</div>
+                                {order.shipping_method && <div>🚚 {order.shipping_method === 'pickup' ? 'איסוף עצמי' : order.shipping_method === 'express' ? 'משלוח מהיר' : 'משלוח רגיל'}</div>}
+                              </div>
+                            </div>
+
+                            {/* רשימת פריטים עם כל הצבעים והחריטה */}
+                            <div style={{ marginBottom: '20px' }}>
+                              <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>פריטים שהוזמנו:</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {items.map((item, idx) => {
+                                  const engravingData = item.customizations?.engraving;
+                                  const optionsData = item.customizations?._options || {};
+                                  const optionEntries = Object.entries(optionsData);
+                                  const itemBasePrice = (item.on_sale && item.sale_price) ? Number(item.sale_price) : Number(item.price || 0);
+                                  const itemExtra = Number(item.extraPrice || 0);
+                                  const lineTotal = (itemBasePrice + itemExtra) * (item.quantity || 1);
+
+                                  return (
+                                    <div key={idx} style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #eee' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <div style={{ fontWeight: '500', fontSize: '14px' }}>
+                                            {item.name}
+                                            {item.quantity > 1 && <span style={{ color: '#666', fontWeight: '400' }}> × {item.quantity}</span>}
+                                          </div>
+
+                                          {/* אפשרויות (צבע / גודל / וכו') */}
+                                          {optionEntries.length > 0 && (
+                                            <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                              {optionEntries.map(([optName, optVal]) => {
+                                                const label = optVal?.label ?? optVal?.name ?? optVal;
+                                                if (!label) return null;
+                                                const colorCode = optVal?.color_code;
+                                                return (
+                                                  <span key={optName} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '3px 8px', fontSize: '12px' }}>
+                                                    {colorCode && <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '50%', background: colorCode, border: '1px solid #ccc' }}></span>}
+                                                    <span style={{ color: '#666' }}>{optName}:</span>
+                                                    <span style={{ fontWeight: '500' }}>{label}</span>
+                                                  </span>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+
+                                          {/* חריטה */}
+                                          {engravingData?.text && (
+                                            <div style={{ marginTop: '6px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', display: 'inline-block' }}>
+                                              <span style={{ color: '#92400e' }}>✨ חריטה: </span>
+                                              <span style={{ fontWeight: '600', color: '#78350f' }}>{engravingData.text}</span>
+                                              {engravingData.color && <span style={{ color: '#92400e' }}> ({engravingData.color})</span>}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div style={{ fontWeight: '600', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                                          ₪{lineTotal.toLocaleString('he-IL')}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* סיכומים */}
+                            <div style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #eee', marginBottom: '20px', fontSize: '14px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                                <span style={{ color: '#666' }}>סכום ביניים:</span>
+                                <span>₪{Number(order.subtotal || 0).toLocaleString('he-IL')}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                                <span style={{ color: '#666' }}>משלוח:</span>
+                                <span>₪{Number(order.shipping || 0).toLocaleString('he-IL')}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 0', borderTop: '1px solid #eee', marginTop: '4px', fontWeight: '600' }}>
+                                <span>סה"כ:</span>
+                                <span>₪{Number(order.total || 0).toLocaleString('he-IL')}</span>
+                              </div>
+                            </div>
+
+                            {/* הערות וברכה */}
+                            {(order.notes || order.blessing) && (
+                              <div style={{ marginBottom: '20px', fontSize: '14px' }}>
+                                {order.notes && (
+                                  <div style={{ marginBottom: '8px' }}>
+                                    <strong>הערות:</strong> {order.notes}
+                                  </div>
+                                )}
+                                {order.blessing && (
+                                  <div>
+                                    <strong>ברכה:</strong> {order.blessing}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* מספר עסקה */}
+                            {order.transaction_id && (
+                              <div style={{ marginBottom: '20px', fontSize: '13px', color: '#666' }}>
+                                מספר עסקה: <span style={{ fontFamily: 'monospace' }}>{order.transaction_id}</span>
+                              </div>
+                            )}
+
+                            {/* כפתורי שינוי סטטוס */}
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                              <span style={{ fontSize: '14px', fontWeight: '500', marginLeft: '8px' }}>שנה סטטוס:</span>
+                              {['paid', 'shipped', 'completed', 'cancelled'].map(s => {
+                                const style = statusColors[s];
+                                const isActive = order.status === s;
+                                return (
+                                  <button
+                                    key={s}
+                                    onClick={() => updateOrderStatus(order.id, s)}
+                                    disabled={isActive}
+                                    style={{
+                                      background: isActive ? style.bg : '#fff',
+                                      color: isActive ? style.color : '#666',
+                                      border: `1px solid ${isActive ? style.color : '#ddd'}`,
+                                      padding: '6px 12px',
+                                      borderRadius: '4px',
+                                      cursor: isActive ? 'default' : 'pointer',
+                                      fontSize: '13px',
+                                      fontWeight: '500',
+                                      width: 'auto'
+                                    }}
+                                  >
+                                    {style.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </div>
         )}
 
@@ -1121,4 +1401,3 @@ const MainDashboard = ({ onLogout }) => {
 };
 
 export default AdminDashboard;
-
