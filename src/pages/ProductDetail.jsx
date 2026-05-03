@@ -67,6 +67,20 @@ const ENGRAVING_CONFIG = {
   }
 }
 
+// ✅ עוזר לבחור צ'ק לבן/שחור על צבע כפתור הצבע
+function isLightColor(hex) {
+  if (!hex || typeof hex !== 'string') return false
+  const c = hex.replace('#', '')
+  if (c.length !== 3 && c.length !== 6) return false
+  const full = c.length === 3 ? c.split('').map(ch => ch + ch).join('') : c
+  const r = parseInt(full.slice(0, 2), 16)
+  const g = parseInt(full.slice(2, 4), 16)
+  const b = parseInt(full.slice(4, 6), 16)
+  // נוסחת בהירות סטנדרטית
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  return brightness > 155
+}
+
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -80,6 +94,7 @@ export default function ProductDetail() {
   const [viewersCount] = useState(Math.floor(Math.random() * 12) + 5)
   const [customizationData, setCustomizationData] = useState({})
   const [selectedOptions, setSelectedOptions] = useState({})
+  const [selectedColor, setSelectedColor] = useState(null)
   const [complementaryProducts, setComplementaryProducts] = useState([])
 
   useEffect(() => {
@@ -205,11 +220,22 @@ export default function ProductDetail() {
   const sizesOption = product.product_options && Array.isArray(product.product_options) ? product.product_options.find(o => o.type === 'sizes') : null
   const productOptions = sizesOption ? [sizesOption] : (product.product_options && Array.isArray(product.product_options) ? product.product_options : [])
 
+  // ✅ רשימת הצבעים מטבלת product_colors שמוגדרת בדאשבורד הניהול
+  const productColors = (product.product_colors && Array.isArray(product.product_colors))
+    ? [...product.product_colors].sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+    : []
+
   const handleAddToCart = () => {
     // בדוק שנבחר גודל אם יש אפשרויות חובה
     const missingRequired = productOptions.filter(opt => opt.required && !selectedOptions[opt.name])
     if (missingRequired.length > 0) {
       alert(`יש לבחור ${missingRequired.map(o => o.name).join(', ')} לפני ההוספה לסל`)
+      return
+    }
+
+    // ✅ אם יש צבעים מוגדרים למוצר - לחייב בחירה
+    if (productColors.length > 0 && !selectedColor) {
+      alert('יש לבחור צבע לפני ההוספה לסל')
       return
     }
     
@@ -224,6 +250,14 @@ export default function ProductDetail() {
     // הוסף ווריאנטים
     if (Object.keys(selectedOptions).length > 0) {
       customizations._options = selectedOptions
+    }
+
+    // ✅ הוסף את הצבע שנבחר תחת אותו מבנה _options כדי שיוצג בעגלה
+    if (selectedColor) {
+      customizations._options = {
+        ...(customizations._options || {}),
+        'צבע': { label: selectedColor.color_name, color_code: selectedColor.color_code, price_delta: 0 }
+      }
     }
     
     addToCart(product, quantity, customizations, calculateExtraPrice())
@@ -331,6 +365,50 @@ export default function ProductDetail() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* ✅ בחירת צבע (מטבלת product_colors בדאשבורד) */}
+            {productColors.length > 0 && (
+              <div className="mb-5">
+                <label className="block text-sm font-medium mb-2">
+                  צבע <span className="text-red-500">*</span>
+                  {selectedColor && (
+                    <span className="text-gray-600 font-normal mr-2">: {selectedColor.color_name}</span>
+                  )}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {productColors.map((color) => {
+                    const isSelected = selectedColor?.id === color.id
+                    return (
+                      <button
+                        key={color.id}
+                        type="button"
+                        onClick={() => setSelectedColor(color)}
+                        title={color.color_name}
+                        aria-label={`צבע ${color.color_name}`}
+                        className={`relative w-10 h-10 rounded-full border-2 transition-all ${
+                          isSelected
+                            ? 'border-black ring-2 ring-offset-2 ring-black'
+                            : 'border-gray-300 hover:border-gray-500'
+                        }`}
+                        style={{ backgroundColor: color.color_code }}
+                      >
+                        {isSelected && (
+                          <svg
+                            className="absolute inset-0 m-auto w-5 h-5"
+                            fill="none"
+                            stroke={isLightColor(color.color_code) ? '#000' : '#fff'}
+                            strokeWidth="3"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
