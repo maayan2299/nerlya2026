@@ -62,7 +62,7 @@ export default function CartDrawer() {
             <div className="space-y-4">
               {cart.map((item) => {
                 // ✅ תקן - בדוק את כל האפשרויות של תמונה
-                const itemImage = item.main_image_url || item.image_url || item.images?.[0]?.image_url || (typeof item.images?.[0] === 'string' ? item.images[0] : null) || item.product_image || null;
+                const itemImage = item.image_url || item.main_image_url || item.primary_image || item.product?.main_image_url || null;
                 const basePrice = parseFloat(item.sale_price || item.price) || 0
                 const engravingPrice = parseFloat(item.engravingPrice) || 0
                 const itemTotal = (basePrice + engravingPrice) * item.quantity
@@ -70,7 +70,7 @@ export default function CartDrawer() {
                 return (
                   <div key={item.uniqueId || item.id} className="flex gap-3 sm:gap-4 pb-4 border-b border-gray-200">
                     {/* תמונה - נוסף flex-shrink-0 כדי שהתמונה לא תימעך */}
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden shadow-sm">
                       {itemImage ? (
                         <img src={itemImage} alt={item.name} className="w-full h-full object-cover" />
                       ) : (
@@ -84,7 +84,7 @@ export default function CartDrawer() {
 
                     {/* פרטים - נוסף min-w-0 כדי למנוע דחיפה של גבולות הקונטיינר */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm mb-1 truncate">{item.name}</h3>
+                      <h3 className="font-medium text-sm mb-1 line-clamp-2">{item.name}</h3>
                       
                       {/* מחיר */}
                       {item.sale_price ? (
