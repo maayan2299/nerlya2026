@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { supabase } from '../lib/supabase'
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams()
@@ -13,8 +14,47 @@ export default function PaymentSuccess() {
     // טעינת פרטי ההזמנה מ-sessionStorage
     const saved = sessionStorage.getItem('pendingOrder')
     if (saved) {
-      setOrder(JSON.parse(saved))
+      const orderData = JSON.parse(saved)
+      setOrder(orderData)
       sessionStorage.removeItem('pendingOrder')
+
+      // ✅ עדכון הסטטוס בטבלת orders ב-Supabase ל-'paid'
+      const transactionId = searchParams.get('uniqueID') || ''
+      if (orderData.orderId) {
+        supabase
+          .from('orders')
+          .update({
+            status: 'paid',
+            transaction_id: transactionId
+          })
+          .eq('order_id', orderData.orderId)
+          .then(({ error }) => {
+            if (error) {
+              console.error('Failed to update order status to paid:', error)
+            }
+          })
+
+        // ✅ שליחת מיילים ללקוח ולחנות דרך Edge Function
+        // (לקוח מקבל אישור מפורט; בעלת החנות מקבלת התראה על הזמנה חדשה)
+        fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({ orderId: orderData.orderId })
+          }
+        )
+          .then(r => r.json())
+          .then(data => {
+            if (!data.success) {
+              console.error('Email sending failed:', data.error)
+            }
+          })
+          .catch(err => console.error('Failed to call send-order-email:', err))
+      }
     }
   }, [])
 
@@ -55,6 +95,44 @@ export default function PaymentSuccess() {
               <span className="font-medium">{order.customerInfo.name}</span>
             </div>
           )}
+
+          {/* ✅ רשימת פריטים שהוזמנו עם פירוט הצבעים והחריטה */}
+          {order?.items && order.items.length > 0 && (
+            <div className="border-t border-gray-300 pt-3 mt-3 space-y-3">
+              <div className="text-gray-600 mb-1 font-medium">פריטים בהזמנה:</div>
+              {order.items.map((item, idx) => {
+                const engravingData = item.customizations?.engraving
+                const optionsData = item.customizations?._options || {}
+                const optionEntries = Object.entries(optionsData)
+                return (
+                  <div key={idx} className="text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">
+                        {item.name}
+                        {item.quantity > 1 && <span className="text-gray-500"> × {item.quantity}</span>}
+                      </span>
+                    </div>
+                    {optionEntries.length > 0 && (
+                      <div className="text-xs text-gray-600 mt-0.5">
+                        {optionEntries.map(([optName, optVal]) => {
+                          const label = optVal?.label ?? optVal?.name ?? optVal
+                          if (!label) return null
+                          return <span key={optName} className="ml-2">{optName}: <span className="font-medium">{label}</span></span>
+                        })}
+                      </div>
+                    )}
+                    {engravingData?.text && (
+                      <div className="text-xs text-amber-700 mt-0.5">
+                        ✨ חריטה: {engravingData.text}
+                        {engravingData.color && ` (${engravingData.color})`}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {order?.totals?.total && (
             <div className="flex justify-between font-bold text-lg border-t border-gray-300 pt-2 mt-2">
               <span>סה"כ שולם:</span>
