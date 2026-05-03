@@ -49,11 +49,25 @@ export default function CartPage() {
           <div className="lg:col-span-2">
             <div className="bg-white border border-gray-200 divide-y divide-gray-200">
               {cart.map((item) => {
-                // ✅ תמונה מ-images[] array
-                const itemImage = item.main_image_url || item.images?.[0]?.image_url || (typeof item.images?.[0] === 'string' ? item.images[0] : null) || null;
-                const basePrice = parseFloat(item.sale_price || item.price) || 0
-                const engravingPrice = parseFloat(item.engravingPrice) || 0
-                const itemTotal = (basePrice + engravingPrice) * item.quantity
+                // ✅ תיקון תמונות - חיפוש קודם במערך product_images
+                const itemImage =
+                  item.product_images?.find(img => img.is_primary)?.image_url ||
+                  item.product_images?.[0]?.image_url ||
+                  item.main_image_url ||
+                  item.image_url ||
+                  (item.images?.[0]?.image_url) ||
+                  (typeof item.images?.[0] === 'string' ? item.images[0] : null) ||
+                  null;
+                const basePrice = (item.on_sale && item.sale_price)
+                  ? parseFloat(item.sale_price)
+                  : parseFloat(item.price) || 0
+                const extraPrice = parseFloat(item.extraPrice) || 0
+                const itemTotal = (basePrice + extraPrice) * item.quantity
+
+                // ✅ קריאת התאמות מהמבנה החדש
+                const engravingData = item.customizations?.engraving
+                const optionsData = item.customizations?._options || {}
+                const optionEntries = Object.entries(optionsData)
 
                 return (
                   <div key={item.uniqueId || item.id} className="p-4 md:p-6 flex gap-4 md:gap-6">
@@ -96,12 +110,33 @@ export default function CartPage() {
                         )}
                       </div>
 
-                      {/* חריטה */}
-                      {item.engravingText && (
+                      {/* ✅ אפשרויות שנבחרו (צבע / גודל / וכו') */}
+                      {optionEntries.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                          {optionEntries.map(([optName, optVal]) => {
+                            const label = optVal?.label ?? optVal?.name ?? optVal
+                            if (!label) return null
+                            return (
+                              <span
+                                key={optName}
+                                className="text-xs bg-gray-100 border border-gray-200 rounded px-2 py-1"
+                              >
+                                <span className="text-gray-600">{optName}: </span>
+                                <span className="font-medium text-gray-900">{label}</span>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* ✅ חריטה (מהמבנה החדש customizations.engraving) */}
+                      {engravingData?.text && (
                         <div className="mb-2 text-xs bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block">
                           <span className="text-amber-700">✨ חריטת שם: </span>
-                          <span className="font-medium text-amber-900">{item.engravingText}</span>
-                          <span className="text-amber-600"> (+₪{engravingPrice})</span>
+                          <span className="font-medium text-amber-900">{engravingData.text}</span>
+                          {engravingData.color && (
+                            <span className="text-amber-700"> ({engravingData.color})</span>
+                          )}
                         </div>
                       )}
 
