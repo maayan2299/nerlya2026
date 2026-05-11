@@ -34,8 +34,29 @@ export default function PaymentSuccess() {
             }
           })
 
+        // ✅ הגדלת מספר השימושים בקופון (אם הוחל קופון)
+        if (orderData.coupon?.id) {
+          supabase
+            .from('coupons')
+            .select('uses_count')
+            .eq('id', orderData.coupon.id)
+            .single()
+            .then(({ data, error }) => {
+              if (!error && data) {
+                supabase
+                  .from('coupons')
+                  .update({ uses_count: (data.uses_count || 0) + 1 })
+                  .eq('id', orderData.coupon.id)
+                  .then(({ error: updateErr }) => {
+                    if (updateErr) {
+                      console.error('Failed to increment coupon usage:', updateErr)
+                    }
+                  })
+              }
+            })
+        }
+
         // ✅ שליחת מיילים ללקוח ולחנות דרך Edge Function
-        // (לקוח מקבל אישור מפורט; בעלת החנות מקבלת התראה על הזמנה חדשה)
         fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`,
           {
@@ -130,6 +151,14 @@ export default function PaymentSuccess() {
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {/* ✅ הצגת הנחת קופון אם הייתה */}
+          {order?.coupon && order?.totals?.discount > 0 && (
+            <div className="flex justify-between border-t border-gray-300 pt-2 mt-2 text-green-600">
+              <span>הנחה ({order.coupon.code}):</span>
+              <span className="font-medium">-₪{order.totals.discount.toLocaleString('he-IL')}</span>
             </div>
           )}
 
