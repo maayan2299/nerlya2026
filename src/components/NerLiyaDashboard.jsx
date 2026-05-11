@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Plus, Trash2, Edit3, Save, X, Upload, Image as ImageIcon, Tag, LogOut, Eye, EyeOff, Search } from 'lucide-react';
+import CouponsTab from './CouponsTab';
 
 // Supabase Configuration
 const supabaseUrl = 'https://ormbbartqrpgtsmoqxhm.supabase.co';
@@ -536,7 +537,7 @@ const MainDashboard = ({ onLogout }) => {
       {/* Tabs Navigation */}
       <div style={{ background: '#fff', borderBottom: '1px solid #eee' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '0' }}>
-          {['overview', 'orders', 'products', 'categories'].map(tab => (
+          {['overview', 'orders', 'products', 'categories', 'coupons'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -556,6 +557,7 @@ const MainDashboard = ({ onLogout }) => {
               {tab === 'orders' && 'הזמנות'}
               {tab === 'products' && 'מוצרים'}
               {tab === 'categories' && 'קטגוריות'}
+              {tab === 'coupons' && '🎟️ קופונים'}
             </button>
           ))}
         </div>
@@ -1396,6 +1398,7 @@ const MainDashboard = ({ onLogout }) => {
           </div>
         </div>
       )}
+      {activeTab === 'coupons' && <CouponsTab />}
     </div>
   );
 };
