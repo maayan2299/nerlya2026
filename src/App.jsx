@@ -11,7 +11,16 @@ import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentError from './pages/PaymentError'
 import CartDrawer from './components/CartDrawer'
 import NerLiyaDashboard from './components/NerLiyaDashboard'
+import PopupBanner from './components/PopupBanner'
 
+// הפופ-אפ יוצג רק בדפי לקוח, לא בדאשבורד או בדפי תשלום
+function ConditionalPopup() {
+  const location = useLocation()
+  const hiddenPaths = ['/admin', '/payment', '/payment-success', '/payment-error']
+  const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p))
+  if (shouldHide) return null
+  return <PopupBanner />
+}
 function App() {
   
   useEffect(() => {
@@ -33,6 +42,7 @@ function App() {
     <CartProvider>
       <Router>
         <CartDrawer /> 
+        <ConditionalPopup />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/product/:id" element={<ProductDetail />} />
