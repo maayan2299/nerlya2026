@@ -199,14 +199,42 @@ export default function ProductDetail() {
   }
   const engravingConfig = getEngravingConfig()
 
+  // ✅ חישוב מחיר חריטה — תלוי בקטגוריית המוצר
+  // כיסויי טלית ותפילין: 5 ש"ח לאות (ללא רווחים)
+  // שאר המוצרים: 10 ש"ח קבוע
+  const ENGRAVING_PRICE_PER_LETTER = 5
+  const ENGRAVING_FLAT_PRICE = 10
+
+  // האם זו קטגוריית כיסויי טלית? (זיהוי לפי המילה "טלית" בשם הקטגוריה)
+  const isTallitCategory = (() => {
+    const categoryName = product.categories?.name || ''
+    return categoryName.includes('טלית')
+  })()
+
+  const countEngravingLetters = (text) => {
+    if (!text) return 0
+    // סופר רק תווים שאינם רווחים (כולל אותיות עבריות, אנגליות, ספרות וסימני פיסוק)
+    return text.replace(/\s/g, '').length
+  }
+
+  const calculateEngravingPrice = () => {
+    const engravingData = customizationData.engraving || {}
+    if (!engravingData.checked || !engravingData.text?.trim()) return 0
+    
+    if (isTallitCategory) {
+      // כיסויי טלית: 5 ש"ח לאות
+      return countEngravingLetters(engravingData.text) * ENGRAVING_PRICE_PER_LETTER
+    } else {
+      // שאר המוצרים: 10 ש"ח קבוע
+      return ENGRAVING_FLAT_PRICE
+    }
+  }
+
   const calculateExtraPrice = () => {
     let extra = 0
     
     // מחיר חריטה
-    const engravingData = customizationData.engraving || {}
-    if (engravingData.checked && engravingData.text?.trim()) {
-      extra += 10 // מחיר חריטה קבוע
-    }
+    extra += calculateEngravingPrice()
     
     // מחיר ווריאנטים
     Object.values(selectedOptions).forEach(val => {
@@ -416,8 +444,10 @@ export default function ProductDetail() {
             {hasCustomization && (
               <div className="border border-gray-200 rounded-lg mb-4 overflow-hidden shadow-sm">
                 <div className="bg-gray-50 px-4 py-3 flex justify-between border-b border-gray-200">
-                  <span className="text-sm font-semibold">✍️ חריטה</span>
-                  <span className="text-sm font-bold" style={{ color: '#C9A84C' }}>+₪10</span>
+                  <span className="text-sm font-semibold">✍️ חריטה אישית</span>
+                  <span className="text-sm font-bold" style={{ color: '#C9A84C' }}>
+                    {isTallitCategory ? '5₪ לאות' : '+₪10'}
+                  </span>
                 </div>
                 <div className="p-4 space-y-4">
                   <label className="flex items-center gap-3 cursor-pointer justify-start">
@@ -430,18 +460,39 @@ export default function ProductDetail() {
                     <span className="text-sm">אני רוצה חריטה על המוצר</span>
                   </label>
                   {(customizationData.engraving?.checked) && (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <input 
                         type="text" 
                         value={customizationData.engraving?.text || ''} 
                         onChange={e => updateCustomization('engraving', 'text', e.target.value)} 
-                        placeholder="מה אתה רוצה לחרוט? (עד 50 תווים)" 
+                        placeholder="הקלידו את הטקסט לחריטה (עד 50 תווים)" 
                         maxLength="50"
                         className="w-full border p-2 text-right text-sm outline-none rounded-sm" 
                       />
-                      <p className="text-xs text-gray-500">
-                        {(customizationData.engraving?.text || '').length}/50
-                      </p>
+                      
+                      {/* ✅ מד תווים + חישוב מחיר חי */}
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500">
+                          {(customizationData.engraving?.text || '').length}/50 תווים
+                        </span>
+                        {customizationData.engraving?.text?.trim() && (
+                          <span className="font-semibold" style={{ color: '#C9A84C' }}>
+                            {isTallitCategory ? (
+                              <>
+                                {countEngravingLetters(customizationData.engraving.text)} אותיות × 5₪ = +₪{calculateEngravingPrice()}
+                              </>
+                            ) : (
+                              <>+₪{calculateEngravingPrice()}</>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {isTallitCategory && (
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                          💡 המחיר מחושב לפי מספר האותיות בלבד (רווחים אינם נספרים)
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
