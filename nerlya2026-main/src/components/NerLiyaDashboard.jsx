@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Plus, Trash2, Edit3, Save, X, Upload, Image as ImageIcon, Tag, LogOut, Eye, EyeOff, Search } from 'lucide-react';
+import CouponsTab from './CouponsTab';
 
 // Supabase Configuration
 const supabaseUrl = 'https://ormbbartqrpgtsmoqxhm.supabase.co';
@@ -106,9 +107,55 @@ const MainDashboard = ({ onLogout }) => {
   const [newImageFile, setNewImageFile] = useState(null);
   const [newColor, setNewColor] = useState({ name: '', code: '' });
 
+  // ✅ Orders state
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // ✅ טעינת הזמנות מטבלת orders ב-Supabase
+  const loadOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error loading orders:', error);
+      } else {
+        setOrders(data || []);
+      }
+    } catch (err) {
+      console.error('Error loading orders:', err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  // ✅ עדכון סטטוס הזמנה
+  const updateOrderStatus = async (orderId, newStatus) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+    if (error) {
+      alert('שגיאה בעדכון סטטוס: ' + error.message);
+    } else {
+      loadOrders();
+    }
+  };
+
+  // ✅ טעינת הזמנות כשנכנסים לטאב
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      loadOrders();
+    }
+  }, [activeTab]);
 
   const loadData = async () => {
     setLoading(true);
@@ -322,7 +369,7 @@ const MainDashboard = ({ onLogout }) => {
     }
   };
 
-  const openEditModal = (product) => {
+  const openEditModal = async (product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
@@ -337,6 +384,11 @@ const MainDashboard = ({ onLogout }) => {
       sale_percentage: product.sale_percentage || '',
       sale_price: product.sale_price || ''
     });
+
+    const { data } = await supabase.from('product_colors').select('*').eq('product_id', product.id);
+  setProductColors(data || []);
+  setNewColor({ name: '', code: '#000000' });
+
   };
 
   const openAddModal = () => {
@@ -485,7 +537,7 @@ const MainDashboard = ({ onLogout }) => {
       {/* Tabs Navigation */}
       <div style={{ background: '#fff', borderBottom: '1px solid #eee' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '0' }}>
-          {['overview', 'products', 'categories'].map(tab => (
+          {['overview', 'orders', 'products', 'categories', 'coupons'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -502,8 +554,10 @@ const MainDashboard = ({ onLogout }) => {
               }}
             >
               {tab === 'overview' && 'סקירה כללית'}
+              {tab === 'orders' && 'הזמנות'}
               {tab === 'products' && 'מוצרים'}
               {tab === 'categories' && 'קטגוריות'}
+              {tab === 'coupons' && '🎟️ קופונים'}
             </button>
           ))}
         </div>
@@ -559,6 +613,239 @@ const MainDashboard = ({ onLogout }) => {
                 })}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ✅ Orders Tab */}
+        {activeTab === 'orders' && (
+          <div>
+            {/* Toolbar - מסננים */}
+            <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <select
+                value={orderStatusFilter}
+                onChange={(e) => setOrderStatusFilter(e.target.value)}
+                style={{ width: 'auto', minWidth: '180px' }}
+              >
+                <option value="all">כל ההזמנות</option>
+                <option value="paid">שולמו</option>
+                <option value="pending">ממתינות לתשלום</option>
+                <option value="shipped">נשלחו</option>
+                <option value="completed">הושלמו</option>
+                <option value="cancelled">בוטלו</option>
+              </select>
+              <button
+                onClick={loadOrders}
+                style={{ background: '#000', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+              >
+                רענן
+              </button>
+              <div style={{ marginRight: 'auto', fontSize: '14px', color: '#666' }}>
+                סה"כ: {orders.filter(o => orderStatusFilter === 'all' || o.status === orderStatusFilter).length} הזמנות
+              </div>
+            </div>
+
+            {/* רשימת הזמנות */}
+            {ordersLoading ? (
+              <div style={{ background: '#fff', padding: '60px', borderRadius: '8px', textAlign: 'center', color: '#666' }}>
+                טוען הזמנות...
+              </div>
+            ) : orders.length === 0 ? (
+              <div style={{ background: '#fff', padding: '60px', borderRadius: '8px', textAlign: 'center', color: '#666' }}>
+                <div style={{ fontSize: '48px', marginBottom: '10px' }}>📦</div>
+                <div style={{ fontSize: '18px', fontWeight: '500' }}>אין הזמנות עדיין</div>
+                <div style={{ fontSize: '14px', marginTop: '8px' }}>הזמנות חדשות יופיעו כאן אוטומטית</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {orders
+                  .filter(o => orderStatusFilter === 'all' || o.status === orderStatusFilter)
+                  .map(order => {
+                    const isExpanded = expandedOrderId === order.id;
+                    const items = Array.isArray(order.items) ? order.items : [];
+                    const statusColors = {
+                      paid: { bg: '#d1fae5', color: '#065f46', label: 'שולם' },
+                      pending: { bg: '#fef3c7', color: '#92400e', label: 'ממתין לתשלום' },
+                      shipped: { bg: '#dbeafe', color: '#1e40af', label: 'נשלח' },
+                      completed: { bg: '#e0e7ff', color: '#3730a3', label: 'הושלם' },
+                      cancelled: { bg: '#fee2e2', color: '#991b1b', label: 'בוטל' }
+                    };
+                    const statusStyle = statusColors[order.status] || { bg: '#f3f4f6', color: '#374151', label: order.status || '-' };
+
+                    return (
+                      <div key={order.id} style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                        {/* כותרת ההזמנה - תמיד מוצגת */}
+                        <div
+                          onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                          style={{ padding: '20px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderBottom: isExpanded ? '1px solid #eee' : 'none' }}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                              {order.customer_name || 'ללא שם'}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#666' }}>
+                              #{order.order_id} · {order.created_at ? new Date(order.created_at).toLocaleString('he-IL') : ''}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: '13px', color: '#666' }}>
+                              {items.length} פריטים
+                            </div>
+                            <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                              ₪{Number(order.total || 0).toLocaleString('he-IL')}
+                            </div>
+                            <span style={{ background: statusStyle.bg, color: statusStyle.color, padding: '4px 12px', borderRadius: '4px', fontSize: '13px', fontWeight: '500' }}>
+                              {statusStyle.label}
+                            </span>
+                            <span style={{ fontSize: '20px', color: '#999' }}>{isExpanded ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+
+                        {/* תוכן מורחב */}
+                        {isExpanded && (
+                          <div style={{ padding: '20px', background: '#fafafa' }}>
+                            {/* פרטי לקוח */}
+                            <div style={{ marginBottom: '20px' }}>
+                              <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>פרטי לקוח:</div>
+                              <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#444' }}>
+                                <div>📞 {order.customer_phone || '-'}</div>
+                                <div>📧 {order.customer_email || '-'}</div>
+                                <div>📍 {order.address || '-'}</div>
+                                {order.shipping_method && <div>🚚 {order.shipping_method === 'pickup' ? 'איסוף עצמי' : order.shipping_method === 'express' ? 'משלוח מהיר' : 'משלוח רגיל'}</div>}
+                              </div>
+                            </div>
+
+                            {/* רשימת פריטים עם כל הצבעים והחריטה */}
+                            <div style={{ marginBottom: '20px' }}>
+                              <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '14px' }}>פריטים שהוזמנו:</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {items.map((item, idx) => {
+                                  const engravingData = item.customizations?.engraving;
+                                  const optionsData = item.customizations?._options || {};
+                                  const optionEntries = Object.entries(optionsData);
+                                  const itemBasePrice = (item.on_sale && item.sale_price) ? Number(item.sale_price) : Number(item.price || 0);
+                                  const itemExtra = Number(item.extraPrice || 0);
+                                  const lineTotal = (itemBasePrice + itemExtra) * (item.quantity || 1);
+
+                                  return (
+                                    <div key={idx} style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #eee' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <div style={{ fontWeight: '500', fontSize: '14px' }}>
+                                            {item.name}
+                                            {item.quantity > 1 && <span style={{ color: '#666', fontWeight: '400' }}> × {item.quantity}</span>}
+                                          </div>
+
+                                          {/* אפשרויות (צבע / גודל / וכו') */}
+                                          {optionEntries.length > 0 && (
+                                            <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                              {optionEntries.map(([optName, optVal]) => {
+                                                const label = optVal?.label ?? optVal?.name ?? optVal;
+                                                if (!label) return null;
+                                                const colorCode = optVal?.color_code;
+                                                return (
+                                                  <span key={optName} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '3px 8px', fontSize: '12px' }}>
+                                                    {colorCode && <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '50%', background: colorCode, border: '1px solid #ccc' }}></span>}
+                                                    <span style={{ color: '#666' }}>{optName}:</span>
+                                                    <span style={{ fontWeight: '500' }}>{label}</span>
+                                                  </span>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+
+                                          {/* חריטה */}
+                                          {engravingData?.text && (
+                                            <div style={{ marginTop: '6px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', display: 'inline-block' }}>
+                                              <span style={{ color: '#92400e' }}>✨ חריטה: </span>
+                                              <span style={{ fontWeight: '600', color: '#78350f' }}>{engravingData.text}</span>
+                                              {engravingData.color && <span style={{ color: '#92400e' }}> ({engravingData.color})</span>}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div style={{ fontWeight: '600', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                                          ₪{lineTotal.toLocaleString('he-IL')}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* סיכומים */}
+                            <div style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #eee', marginBottom: '20px', fontSize: '14px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                                <span style={{ color: '#666' }}>סכום ביניים:</span>
+                                <span>₪{Number(order.subtotal || 0).toLocaleString('he-IL')}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                                <span style={{ color: '#666' }}>משלוח:</span>
+                                <span>₪{Number(order.shipping || 0).toLocaleString('he-IL')}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 0', borderTop: '1px solid #eee', marginTop: '4px', fontWeight: '600' }}>
+                                <span>סה"כ:</span>
+                                <span>₪{Number(order.total || 0).toLocaleString('he-IL')}</span>
+                              </div>
+                            </div>
+
+                            {/* הערות וברכה */}
+                            {(order.notes || order.blessing) && (
+                              <div style={{ marginBottom: '20px', fontSize: '14px' }}>
+                                {order.notes && (
+                                  <div style={{ marginBottom: '8px' }}>
+                                    <strong>הערות:</strong> {order.notes}
+                                  </div>
+                                )}
+                                {order.blessing && (
+                                  <div>
+                                    <strong>ברכה:</strong> {order.blessing}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* מספר עסקה */}
+                            {order.transaction_id && (
+                              <div style={{ marginBottom: '20px', fontSize: '13px', color: '#666' }}>
+                                מספר עסקה: <span style={{ fontFamily: 'monospace' }}>{order.transaction_id}</span>
+                              </div>
+                            )}
+
+                            {/* כפתורי שינוי סטטוס */}
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                              <span style={{ fontSize: '14px', fontWeight: '500', marginLeft: '8px' }}>שנה סטטוס:</span>
+                              {['paid', 'shipped', 'completed', 'cancelled'].map(s => {
+                                const style = statusColors[s];
+                                const isActive = order.status === s;
+                                return (
+                                  <button
+                                    key={s}
+                                    onClick={() => updateOrderStatus(order.id, s)}
+                                    disabled={isActive}
+                                    style={{
+                                      background: isActive ? style.bg : '#fff',
+                                      color: isActive ? style.color : '#666',
+                                      border: `1px solid ${isActive ? style.color : '#ddd'}`,
+                                      padding: '6px 12px',
+                                      borderRadius: '4px',
+                                      cursor: isActive ? 'default' : 'pointer',
+                                      fontSize: '13px',
+                                      fontWeight: '500',
+                                      width: 'auto'
+                                    }}
+                                  >
+                                    {style.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </div>
         )}
 
@@ -927,10 +1214,88 @@ const MainDashboard = ({ onLogout }) => {
                   )}
                 </div>
 
+                
+                
                 {!editingProduct && (
                   <div>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>תמונה ראשית</label>
                     <input type="file" accept="image/*" onChange={(e) => setNewImageFile(e.target.files[0])} style={{ padding: '8px' }} />
+                  </div>
+                )}
+                
+                                {/* סקשן צבעים - חדש! */}
+                {editingProduct && (
+                  <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>🎨 צבעים זמינים</h3>
+                    
+                    {/* הוספת צבע חדש */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '10px', marginBottom: '16px' }}>
+                      <input 
+                        type="text" 
+                        value={newColor.name} 
+                        onChange={(e) => setNewColor({...newColor, name: e.target.value})} 
+                        placeholder="שם צבע (לבן, שחור...)" 
+                      />
+                      <input 
+                        type="color" 
+                        value={newColor.code || '#000000'} 
+                        onChange={(e) => setNewColor({...newColor, code: e.target.value})} 
+                        style={{ width: '60px', height: '45px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px' }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={async () => {
+                          if (!newColor.name || !newColor.code) {
+                            alert('אנא מלא שם וצבע');
+                            return;
+                          }
+                          await supabase.from('product_colors').insert([{
+                            product_id: editingProduct.id,
+                            color_name: newColor.name,
+                            color_code: newColor.code.toLowerCase(),
+                            display_order: productColors.length
+                          }]);
+                          const { data } = await supabase.from('product_colors').select('*').eq('product_id', editingProduct.id);
+                          setProductColors(data || []);
+                          setNewColor({ name: '', code: '#000000' });
+                        }}
+                        style={{ padding: '0 16px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '14px' }}
+                      >
+                        הוסף
+                      </button>
+                    </div>
+                
+                    {/* רשימת הצבעים */}
+                    {productColors.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {productColors.map(color => (
+                          <div key={color.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', background: '#fff', borderRadius: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: color.color_code }}></div>
+                              <span style={{ fontSize: '14px', fontWeight: '500' }}>{color.color_name}</span>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm('למחוק צבע?')) return;
+                                await supabase.from('product_colors').delete().eq('id', color.id);
+                                const { data } = await supabase.from('product_colors').select('*').eq('product_id', editingProduct.id);
+                                setProductColors(data || []);
+                              }}
+                              style={{ background: '#fff', border: '1px solid #dc2626', color: '#dc2626', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                            >
+                              מחק
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {productColors.length === 0 && (
+                      <div style={{ padding: '12px', background: '#fff', borderRadius: '4px', color: '#666', fontSize: '13px', textAlign: 'center' }}>
+                        לא נוספו צבעים למוצר זה
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -996,7 +1361,21 @@ const MainDashboard = ({ onLogout }) => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '20px' }}>
               <input type="text" value={newColor.name} onChange={(e) => setNewColor({...newColor, name: e.target.value})} placeholder="שם צבע (חום, כחול...)" />
-              <input type="text" value={newColor.code} onChange={(e) => setNewColor({...newColor, code: e.target.value})} placeholder="קוד (#4d4037)" />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="color" 
+                  value={newColor.code || '#000000'} 
+                  onChange={(e) => setNewColor({...newColor, code: e.target.value})} 
+                  style={{ width: '60px', height: '45px', cursor: 'pointer', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+                <input 
+                  type="text" 
+                  value={newColor.code || ''} 
+                  onChange={(e) => setNewColor({...newColor, code: e.target.value})} 
+                  placeholder="קוד (#4d4037)" 
+                  style={{ flex: 1 }}
+                />
+              </div>
               <button onClick={addColor} style={{ padding: '12px 20px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }}>הוסף</button>
             </div>
 
@@ -1019,6 +1398,7 @@ const MainDashboard = ({ onLogout }) => {
           </div>
         </div>
       )}
+      {activeTab === 'coupons' && <CouponsTab />}
     </div>
   );
 };
