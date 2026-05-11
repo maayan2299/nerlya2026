@@ -29,6 +29,12 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [paymentError, setPaymentError] = useState('')
 
+  // ✅ ניהול קופונים
+  const [couponCode, setCouponCode] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [couponError, setCouponError] = useState('')
+  const [checkingCoupon, setCheckingCoupon] = useState(false)
+
   const breadcrumbItems = [
     { label: 'עמוד הבית', link: '/' },
     { label: 'עגלת קניות', link: '/cart' },
@@ -73,7 +79,84 @@ export default function CheckoutPage() {
   }
 
   const shippingCost = getShippingCost()
-  const finalTotal = getSubtotal() + shippingCost
+  const subtotal = getSubtotal()
+
+  // ✅ חישוב הנחה
+  const calculateDiscount = () => {
+    if (!appliedCoupon) return 0
+    if (appliedCoupon.discount_type === 'percent') {
+      return Math.round((subtotal * appliedCoupon.discount_value) / 100)
+    }
+    // sum
+    return Math.min(appliedCoupon.discount_value, subtotal)
+  }
+
+  const discount = calculateDiscount()
+  const finalTotal = Math.max(0, subtotal + shippingCost - discount)
+
+  // ✅ אימות והחלת קופון
+  const applyCoupon = async () => {
+    setCouponError('')
+    const code = couponCode.trim().toUpperCase()
+    if (!code) {
+      setCouponError('יש להזין קוד קופון')
+      return
+    }
+
+    setCheckingCoupon(true)
+    try {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .ilike('code', code)
+        .eq('active', true)
+        .maybeSingle()
+
+      if (error) throw error
+
+      if (!data) {
+        setCouponError('הקוד לא תקין או לא פעיל')
+        setAppliedCoupon(null)
+        return
+      }
+
+      // בדיקת תוקף
+      if (data.valid_until && new Date(data.valid_until) < new Date()) {
+        setCouponError('הקוד פג תוקף')
+        setAppliedCoupon(null)
+        return
+      }
+
+      // בדיקת מספר שימושים
+      if (data.max_uses && data.uses_count >= data.max_uses) {
+        setCouponError('הקוד הזה כבר נוצל במלואו')
+        setAppliedCoupon(null)
+        return
+      }
+
+      // בדיקת מינימום הזמנה
+      if (data.min_order_amount > 0 && subtotal < data.min_order_amount) {
+        setCouponError(`הקוד דורש הזמנה מינימלית של ₪${data.min_order_amount}`)
+        setAppliedCoupon(null)
+        return
+      }
+
+      // הכל תקין!
+      setAppliedCoupon(data)
+      setCouponError('')
+    } catch (err) {
+      console.error('Coupon check failed:', err)
+      setCouponError('שגיאה בבדיקת הקוד, נסי שוב')
+    } finally {
+      setCheckingCoupon(false)
+    }
+  }
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponCode('')
+    setCouponError('')
+  }
 
   const handleCheckout = async (e) => {
     e.preventDefault()
@@ -103,7 +186,12 @@ export default function CheckoutPage() {
             : `${formData.street}, ${formData.city}, ${formData.zipCode}`
         },
         shipping: { method: formData.shippingMethod, cost: shippingCost },
-        totals: { subtotal: getSubtotal(), shipping: shippingCost, total: finalTotal },
+        totals: { subtotal, shipping: shippingCost, discount, total: finalTotal },
+        coupon: appliedCoupon ? {
+          id: appliedCoupon.id,
+          code: appliedCoupon.code,
+          discount_amount: discount
+        } : null,
         notes: formData.notes,
         blessing: formData.blessing,
         date: new Date().toISOString()
@@ -111,31 +199,29 @@ export default function CheckoutPage() {
       sessionStorage.setItem('pendingOrder', JSON.stringify(orderData))
 
       // ✅ שמירת ההזמנה בטבלת orders ב-Supabase עם status='pending'
-      // הסטטוס יעודכן ל-'paid' ב-PaymentSuccess אחרי שהתשלום עבר בהצלחה
       const { error: dbError } = await supabase.from('orders').insert([{
         order_id: orderId,
         customer_name: formData.fullName,
         customer_email: formData.email,
         customer_phone: formData.phone,
         address: orderData.customerInfo.address,
-        items: cart, // jsonb - כולל customizations עם הצבעים, חריטה ואפשרויות
-        subtotal: getSubtotal(),
+        items: cart,
+        subtotal,
         shipping: shippingCost,
         total: finalTotal,
         shipping_method: formData.shippingMethod,
         notes: formData.notes,
         blessing: formData.blessing,
+        coupon_code: appliedCoupon?.code || null,
+        coupon_discount: discount || null,
         status: 'pending'
       }])
 
       if (dbError) {
-        // אם השמירה נכשלת - לוג בלבד; לא חוסם תשלום
         console.error('Failed to save order to Supabase:', dbError)
       }
 
       // --- תחילת מנגנון התשלום דרך Edge Function ---
-      
-      // Step 1: קרא ל-Edge Function שלנו שעושה APISign ומחזיר signature
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment`,
         {
@@ -161,13 +247,11 @@ export default function CheckoutPage() {
 
       const paymentData = await response.json()
 
-      // Step 2: אם קיבלנו paymentUrl עם signature - רדיריקט
       if (paymentData.paymentUrl) {
         window.location.href = paymentData.paymentUrl
       } else {
         throw new Error(paymentData.error || 'Unknown payment error')
       }
-      // --- סיום מנגנון התשלום ---
 
     } catch (error) {
       console.error('❌ שגיאת תשלום:', error)
@@ -187,38 +271,22 @@ export default function CheckoutPage() {
       <Breadcrumbs items={breadcrumbItems} />
 
       <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
-        <h1 className="text-3xl md:text-4xl font-bold mb-8">תשלום והזמנה</h1>
+        <h1 className="text-4xl font-bold mb-8">תשלום</h1>
 
         {paymentError && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">שגיאה בתשלום</h3>
-              </div>
-              <p className="text-gray-600 mb-6 leading-relaxed">{paymentError}</p>
-              <button
-                onClick={() => setPaymentError('')}
-                className="w-full bg-black text-white py-3 font-medium rounded hover:bg-gray-800 transition-colors"
-              >
-                חזור ונסה שוב
-              </button>
-            </div>
+          <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded text-red-700">
+            ⚠️ {paymentError}
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <form onSubmit={handleCheckout} className="space-y-8">
-              {/* פרטי לקוח */}
+            <form onSubmit={handleCheckout} className="space-y-6">
+              {/* פרטים אישיים */}
               <div className="bg-white border border-gray-200 p-6 rounded">
-                <h2 className="text-2xl font-bold mb-6">פרטי לקוח</h2>
+                <h2 className="text-2xl font-bold mb-6">פרטים אישיים</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-2">שם מלא *</label>
                     <input 
                       type="text" 
@@ -226,7 +294,7 @@ export default function CheckoutPage() {
                       value={formData.fullName} 
                       onChange={handleInputChange}
                       className={`w-full border-2 ${errors.fullName ? 'border-red-500' : 'border-gray-300'} p-3 rounded focus:border-black focus:outline-none transition-colors`}
-                      placeholder="שם פרטי ומשפחה" 
+                      placeholder="שם פרטי ושם משפחה" 
                     />
                     {errors.fullName && <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>}
                   </div>
@@ -242,7 +310,7 @@ export default function CheckoutPage() {
                     />
                     {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                   </div>
-                  <div className="md:col-span-2">
+                  <div>
                     <label className="block text-sm font-medium mb-2">אימייל *</label>
                     <input 
                       type="email" 
@@ -250,33 +318,30 @@ export default function CheckoutPage() {
                       value={formData.email} 
                       onChange={handleInputChange}
                       className={`w-full border-2 ${errors.email ? 'border-red-500' : 'border-gray-300'} p-3 rounded focus:border-black focus:outline-none transition-colors`}
-                      placeholder="example@email.com" 
+                      placeholder="email@example.com" 
                     />
                     {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                   </div>
                 </div>
               </div>
 
-              {/* אופציית משלוח */}
+              {/* שיטת משלוח */}
               <div className="bg-white border border-gray-200 p-6 rounded">
-                <h2 className="text-2xl font-bold mb-6">אופציית משלוח</h2>
+                <h2 className="text-2xl font-bold mb-6">שיטת משלוח</h2>
                 <div className="space-y-3">
                   {[
-                    { value: 'standard', label: 'משלוח רגיל', desc: `5-7 ימי עסקים • ${getShipping() === 0 ? 'חינם!' : `₪${getShipping()}`}` },
-                    { value: 'express', label: 'משלוח מהיר', desc: '1-2 ימי עסקים • ₪60' },
-                    { value: 'pickup', label: 'איסוף עצמי מבת-ים', desc: 'ללא עלות' }
+                    { value: 'standard', label: 'משלוח רגיל', desc: '5-7 ימי עסקים — חינם!' },
+                    { value: 'express', label: 'משלוח אקספרס', desc: '1-2 ימי עסקים — ₪60' },
+                    { value: 'pickup', label: 'איסוף עצמי', desc: 'מבת-ים — חינם!' }
                   ].map(opt => (
-                    <label 
-                      key={opt.value} 
-                      className={`flex items-center p-4 border-2 rounded cursor-pointer transition-colors ${formData.shippingMethod === opt.value ? 'border-black bg-gray-50' : 'border-gray-300 hover:border-gray-400'}`}
-                    >
+                    <label key={opt.value} className="flex items-center gap-3 p-3 border-2 border-gray-200 rounded cursor-pointer hover:border-gray-400">
                       <input 
                         type="radio" 
                         name="shippingMethod" 
-                        value={opt.value}
-                        checked={formData.shippingMethod === opt.value} 
-                        onChange={handleInputChange} 
-                        className="ml-3" 
+                        value={opt.value} 
+                        checked={formData.shippingMethod === opt.value}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 accent-black"
                       />
                       <div>
                         <div className="font-medium">{opt.label}</div>
@@ -399,7 +464,6 @@ export default function CheckoutPage() {
                     : parseFloat(item.price) || 0
                   const extraPrice = parseFloat(item.extraPrice) || 0
 
-                  // ✅ קריאת התאמות מהמבנה החדש
                   const engravingData = item.customizations?.engraving
                   const optionsData = item.customizations?._options || {}
                   const optionEntries = Object.entries(optionsData)
@@ -409,7 +473,6 @@ export default function CheckoutPage() {
                       <div className="flex-1 min-w-0 pl-2">
                         <div className="font-medium">{item.name}</div>
                         <div className="text-gray-600">כמות: {item.quantity}</div>
-                        {/* ✅ אפשרויות שנבחרו */}
                         {optionEntries.map(([optName, optVal]) => {
                           const label = optVal?.label ?? optVal?.name ?? optVal
                           if (!label) return null
@@ -419,7 +482,6 @@ export default function CheckoutPage() {
                             </div>
                           )
                         })}
-                        {/* ✅ חריטה */}
                         {engravingData?.text && (
                           <div className="text-xs text-amber-700">
                             ✨ חריטה: {engravingData.text}
@@ -433,10 +495,59 @@ export default function CheckoutPage() {
                 })}
               </div>
 
+              {/* ✅ שדה קופון */}
+              <div className="border-t border-gray-300 pt-4 mb-4">
+                <label className="block text-sm font-medium mb-2">🎟️ קוד קופון</label>
+                {appliedCoupon ? (
+                  <div className="bg-green-50 border border-green-200 rounded p-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-green-700 text-sm">
+                        ✅ קוד "{appliedCoupon.code}" הוחל
+                      </div>
+                      <div className="text-xs text-green-600">
+                        הנחה: {appliedCoupon.discount_type === 'percent' 
+                          ? `${appliedCoupon.discount_value}%` 
+                          : `₪${appliedCoupon.discount_value}`}
+                      </div>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={removeCoupon}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      הסירי
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        placeholder="הקלידי קוד"
+                        className="flex-1 border-2 border-gray-300 p-2 rounded text-sm focus:border-black focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={applyCoupon}
+                        disabled={checkingCoupon}
+                        className="bg-black text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-800 disabled:bg-gray-400"
+                      >
+                        {checkingCoupon ? '...' : 'החל'}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-red-600 text-xs mt-1">{couponError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="border-t border-gray-300 pt-4 space-y-3 mb-6">
                 <div className="flex justify-between text-base">
                   <span className="text-gray-600">סכום ביניים:</span>
-                  <span className="font-medium">₪{getSubtotal().toLocaleString('he-IL')}</span>
+                  <span className="font-medium">₪{subtotal.toLocaleString('he-IL')}</span>
                 </div>
                 <div className="flex justify-between text-base">
                   <span className="text-gray-600">משלוח:</span>
@@ -444,6 +555,13 @@ export default function CheckoutPage() {
                     {shippingCost === 0 ? <span className="text-green-600">חינם!</span> : `₪${shippingCost}`}
                   </span>
                 </div>
+                {/* ✅ הצגת הנחה */}
+                {discount > 0 && (
+                  <div className="flex justify-between text-base text-green-600">
+                    <span>הנחה ({appliedCoupon?.code}):</span>
+                    <span className="font-medium">-₪{discount.toLocaleString('he-IL')}</span>
+                  </div>
+                )}
                 <div className="border-t-2 border-gray-300 pt-3 flex justify-between font-bold text-xl">
                   <span>סה"כ לתשלום:</span>
                   <span>₪{finalTotal.toLocaleString('he-IL')}</span>
