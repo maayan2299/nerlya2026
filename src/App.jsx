@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { CartProvider } from './context/CartContext'
 import HomePage from './pages/HomePage'
 import ProductDetail from './pages/ProductDetail'
